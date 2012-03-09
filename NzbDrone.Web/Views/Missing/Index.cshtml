@@ -1,16 +1,11 @@
 ﻿@model String
-@using NzbDrone.Common
 @using NzbDrone.Web.Helpers
-@using NzbDrone.Web.Models;
 @{ViewBag.Title = "Missing";}
-@section HeaderContent
-{
-    @Html.IncludeCss("Grid.css")
-}
+
 @section ActionMenu{
     <ul class="sub-menu">
         <li>@Ajax.ActionLink("Start RSS Sync", "RssSync", "Command", null, null)</li>
-        <li>@Ajax.ActionLink("Start Backlog Search", "BacklogSearch", "Command", null, null, new { title = "Backlog search for ALL missing episodes" })</li>
+        <li>@Ajax.ActionLink("Start Backlog Search", "BacklogSearch", "Command",null, null, new { title = "Backlog search for ALL missing episodes"})</li>
         <li>@Ajax.ActionLink("Start Recent Backlog Search", "RecentBacklogSearch", "Command", null, null, new { title = "Backlog search for missing episodes that aired in the last 30 days only" })</li>
     </ul>
 }
@@ -31,9 +26,9 @@
                     AirDate
                 </th>
                 @*Commands Column*@
-                <th>
-                    Actions
-                </th>
+                <th/>
+                    
+                
                 @*Details Column*@
                 <th style="display: none;">
                     Details
@@ -68,7 +63,15 @@
             "iDisplayLength": 20,
             "sPaginationType": "four_button",
             "aoColumns": [
-                            { sWidth: 'auto', "mDataProp": "SeriesTitle" }, //Series Title
+                            { sWidth: 'auto', "mDataProp": function (source, type, val) {
+                                                                        // 'display' and 'filter' use our fancy naming
+                                                                        if (type === 'display' || type === 'filter') {
+                                                                            return "<a href='/Series/Details?seriesId=" + source["SeriesId"] + "'>" + source["SeriesTitle"] + "</a>";
+                                                                        }
+                                                                        // 'sort' and 'type' both just use the raw data
+                                                                        return source["SeriesTitleSorter"];
+                                                                    } 
+                            }, //Series Title
                             { sWidth: '80px', "mDataProp": "EpisodeNumbering", "bSortable": false }, //EpisodeNumbering
                             { sWidth: 'auto', "mDataProp": "EpisodeTitle", "bSortable": false }, //Episode Title
                             { sWidth: '150px', "mDataProp": function (source, type, val) {
@@ -81,7 +84,9 @@
                                                                 } 
                             }, //Grabbed On
                             { sWidth: '40px', "mDataProp": "EpisodeId", "bSortable": false, "fnRender": function (row) {
-                                    return createImageAjaxLink('/Episode/Search?episodeId=' + row.aData["EpisodeId"], '../../Content/Images/Search.png', 'Search', 'Search for Episode', 'gridImage');
+                                    var link = '@Ajax.ImageActionLink("../../Content/Images/Search.png", new {  title = "Search for Episode", alt = "Search", @class = "gridAction" }, "Search", "Episode", new { episodeId = "REPLACE" }, null, null)';
+                                    link = link.replace("REPLACE", row.aData["EpisodeId"]);
+                                    return link;
                                 }
                             }, //Actions
                             { sWidth: 'auto', "mDataProp": "Details", "bSortable": false, "bVisible": false, "fnRender": function (row) {

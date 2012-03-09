@@ -1,8 +1,8 @@
 using NzbDrone.Services.Service.Datastore;
-using PetaPoco;
 using Microsoft.Web.Infrastructure.DynamicModuleHelper;
 using Ninject;
 using Ninject.Web.Mvc;
+using Services.PetaPoco;
 
 [assembly: WebActivator.PreApplicationStartMethod(typeof(NzbDrone.Services.Service.App_Start.NinjectMVC3), "Start")]
 [assembly: WebActivator.ApplicationShutdownMethodAttribute(typeof(NzbDrone.Services.Service.App_Start.NinjectMVC3), "Stop")]
@@ -29,15 +29,8 @@ namespace NzbDrone.Services.Service.App_Start
         private static IKernel CreateKernel()
         {
             var kernel = new StandardKernel();
-            InitDb(kernel);
+            kernel.Bind<IDatabase>().ToMethod(c => Connection.GetPetaPocoDb());
             return kernel;
-        }
-
-
-        private static void InitDb(IKernel kernel)
-        {
-            var db = Connection.GetPetaPocoDb();
-            kernel.Bind<IDatabase>().ToConstant(db);
         }
     }
 }

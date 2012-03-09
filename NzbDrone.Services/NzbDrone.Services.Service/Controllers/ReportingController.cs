@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Web.Mvc;
+using NLog;
+using NzbDrone.Common;
 using NzbDrone.Common.Contract;
 using NzbDrone.Services.Service.Repository.Reporting;
-using PetaPoco;
+using Services.PetaPoco;
 
 
 namespace NzbDrone.Services.Service.Controllers
@@ -11,48 +13,59 @@ namespace NzbDrone.Services.Service.Controllers
     public class ReportingController : Controller
     {
         private readonly IDatabase _database;
+        private readonly ExceptionController _exceptionController;
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         private const string OK = "OK";
 
-        public ReportingController(IDatabase database)
+        public ReportingController(IDatabase database, ExceptionController exceptionController)
         {
             _database = database;
+            _exceptionController = exceptionController;
         }
 
         [HttpPost]
         public JsonResult ParseError(ParseErrorReport parseErrorReport)
         {
-            if (ParseErrorExists(parseErrorReport.Title))
+            try
+            {
+
+
+                logger.Trace(parseErrorReport.NullSafe());
+
+                if (ParseErrorExists(parseErrorReport.Title))
+                    return Json(OK);
+
+                var row = new ParseErrorRow();
+                row.LoadBase(parseErrorReport);
+                row.Title = parseErrorReport.Title;
+
+                _database.Insert(row);
+
                 return Json(OK);
+            }
+            catch (Exception e)
+            {
+                logger.FatalException("Error has occurred while saving parse report", e);
+                if (!parseErrorReport.IsProduction)
+                {
+                    throw;
+                }
+            }
 
-            var row = new ParseErrorRow();
-            row.LoadBase(parseErrorReport);
-            row.Title = parseErrorReport.Title;
-
-            _database.Insert(row);
-
-            return Json(OK);
+            return new JsonResult();
         }
 
 
         private bool ParseErrorExists(string title)
         {
-            return _database.Exists<ParseErrorRow>("WHERE Title = @0", title);
+            return _database.Exists<ParseErrorRow>(title);
         }
 
         [HttpPost]
         public JsonResult ReportException(ExceptionReport exceptionReport)
         {
-            var row = new ExceptionRow();
-            row.LoadBase(exceptionReport);
-            row.LogMessage = exceptionReport.LogMessage;
-            row.Logger = exceptionReport.Logger;
-            row.String = exceptionReport.String;
-            row.Type = exceptionReport.Type;
-
-            _database.Insert(row);
-
-            return Json(OK);
+           return _exceptionController.ReportNew(exceptionReport);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Web.Mvc;
 using System.Web.Script.Serialization;
+using NzbDrone.Core.Helpers;
 using NzbDrone.Core.Jobs;
 using NzbDrone.Core.Providers;
 using NzbDrone.Web.Models;
@@ -33,10 +34,12 @@ namespace NzbDrone.Web.Controllers
                 EpisodeTitle = h.Episode.Title,
                 EpisodeOverview = h.Episode.Overview,
                 SeriesTitle = h.SeriesTitle,
+                SeriesTitleSorter = SortHelper.SkipArticles(h.SeriesTitle),
                 NzbTitle = h.NzbTitle,
                 Quality = h.Quality.ToString(),
                 IsProper = h.IsProper,
                 Date = h.Date.ToString(),
+                DateSorter = h.Date.ToString("MM/dd/yyyy h:mm:ss tt"),
                 Indexer = h.Indexer,
                 EpisodeId = h.EpisodeId
             }).OrderByDescending(h => h.Date).ToList();
@@ -78,7 +81,7 @@ namespace NzbDrone.Web.Controllers
             //Queue a job to download the replacement episode
             _jobProvider.QueueJob(typeof(EpisodeSearchJob), episodeId);
 
-            return JsonNotificationResult.Info("Episode Redownload Started");
+            return JsonNotificationResult.Queued("Episode search");
         }
     }
 }

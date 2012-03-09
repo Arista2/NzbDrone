@@ -45,6 +45,8 @@ namespace NzbDrone.Test.Common
         [SetUp]
         public void TestBaseSetup()
         {
+            EnvironmentProvider.RegisterNewInstall = true; 
+
             MockedRestProvider = new Mock<RestProvider>();
             ReportingService.RestProvider = MockedRestProvider.Object;
 
@@ -73,7 +75,7 @@ namespace NzbDrone.Test.Common
 
         protected void WithTempAsAppPath()
         {
-            Mocker.GetMock<EnviromentProvider>()
+            Mocker.GetMock<EnvironmentProvider>()
                 .SetupGet(c => c.ApplicationPath)
                 .Returns(VirtualPath);
         }

@@ -53,12 +53,19 @@ function bindSeriesAutoComplete(selector) {
                 $(this).val(ui.item.Title);
                 $(this).siblings('.seriesId').val(ui.item.Id);
                 return false;
+            },
+            open: function (event, ui) {
+                $('.ui-autocomplete').addClass('seriesLookupResults');
+            },
+            close: function (event, ui) {
+                $('.ui-autocomplete').removeClass('seriesLookupResults');
             }
+
         })
 	    .data("autocomplete")._renderItem = function (ul, item) {
 	        return $("<li></li>")
 			.data("item.autocomplete", item)
-			.append("<a><strong>" + item.Title + "</strong><br>" + item.FirstAired + "</a>")
+			.append("<a>" + item.DisplayedTitle + "<img src='../../Content/Images/thetvdb.png' class='tvDbLink' title='Click to see series details from TheTVDB' rel='" + item.Url + "' /></a>")
 			.appendTo(ul);
 	    };
     });

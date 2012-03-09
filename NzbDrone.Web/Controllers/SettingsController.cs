@@ -49,14 +49,6 @@ namespace NzbDrone.Web.Controllers
             _seriesProvider = seriesProvider;
         }
 
-        public JsonResult TestResults(string q)
-        {
-            var results = new List<TvDbSearchResultModel>();
-            results.Add(new TvDbSearchResultModel { Id = 1, Title = "30 Rock", FirstAired = DateTime.Today.ToShortDateString() });
-            results.Add(new TvDbSearchResultModel { Id = 2, Title = "The Office", FirstAired = DateTime.Today.AddDays(-1).ToShortDateString() });
-
-            return Json(results, JsonRequestBehavior.AllowGet);
-        }
 
         public ActionResult Index()
         {
@@ -67,6 +59,8 @@ namespace NzbDrone.Web.Controllers
         {
             return View(new IndexerSettingsModel
                             {
+                                Retention = _configProvider.Retention,
+
                                 NzbMatrixUsername = _configProvider.NzbMatrixUsername,
                                 NzbMatrixApiKey = _configProvider.NzbMatrixApiKey,
 
@@ -178,7 +172,15 @@ namespace NzbDrone.Web.Controllers
                                 ProwlNotifyOnDownload = _configProvider.ProwlNotifyOnDownload,
                                 ProwlApiKeys = _configProvider.ProwlApiKeys,
                                 ProwlPriority = _configProvider.ProwlPriority,
-                                ProwlPrioritySelectList = GetProwlPrioritySelectList()
+                                ProwlPrioritySelectList = GetProwlPrioritySelectList(),
+                                PlexEnabled = _externalNotificationProvider.GetSettings(typeof(Plex)).Enable,
+                                PlexNotifyOnGrab = _configProvider.PlexNotifyOnGrab,
+                                PlexNotifyOnDownload = _configProvider.PlexNotifyOnDownload,
+                                PlexUpdateLibrary = _configProvider.PlexUpdateLibrary,
+                                PlexServerHost = _configProvider.PlexServerHost,
+                                PlexClientHosts = _configProvider.PlexClientHosts,
+                                PlexUsername = _configProvider.PlexUsername,
+                                PlexPassword = _configProvider.PlexPassword,
                             };
 
             return View(model);
@@ -230,6 +232,7 @@ namespace NzbDrone.Web.Controllers
         {
             var model = new MiscSettingsModel();
             model.EnableBacklogSearching = _configProvider.EnableBacklogSearching;
+            model.AutoIgnorePreviouslyDownloadedEpisodes = _configProvider.AutoIgnorePreviouslyDownloadedEpisodes;
 
             return View(model);
         }
@@ -269,7 +272,7 @@ namespace NzbDrone.Web.Controllers
         public JsonResult DeleteQualityProfile(int profileId)
         {
             if (_seriesProvider.GetAllSeries().Where(s => s.QualityProfileId == profileId).Count() != 0)
-                return JsonNotificationResult.Opps("Profile is still in use.");
+                return JsonNotificationResult.Oops("Profile is still in use.");
 
             _qualityProvider.Delete(profileId);
 
@@ -338,6 +341,8 @@ namespace NzbDrone.Web.Controllers
         {
             if (ModelState.IsValid)
             {
+                _configProvider.Retention = data.Retention;
+
                 var nzbsOrgSettings = _indexerProvider.GetSettings(typeof(NzbsOrg));
                 nzbsOrgSettings.Enable = data.NzbsOrgEnabled;
                 _indexerProvider.SaveSettings(nzbsOrgSettings);
@@ -398,7 +403,7 @@ namespace NzbDrone.Web.Controllers
                 return GetSuccessResult();
             }
 
-            return JsonNotificationResult.Opps("Invalid Data");
+            return JsonNotificationResult.Oops("Invalid Data");
         }
 
         [HttpPost]
@@ -526,6 +531,19 @@ namespace NzbDrone.Web.Controllers
                 _configProvider.ProwlApiKeys = data.ProwlApiKeys;
                 _configProvider.ProwlPriority = data.ProwlPriority;
 
+                //Plex
+                var plexSettings = _externalNotificationProvider.GetSettings(typeof(Plex));
+                plexSettings.Enable = data.PlexEnabled;
+                _externalNotificationProvider.SaveSettings(plexSettings);
+
+                _configProvider.PlexNotifyOnGrab = data.PlexNotifyOnGrab;
+                _configProvider.PlexNotifyOnDownload = data.PlexNotifyOnDownload;
+                _configProvider.PlexUpdateLibrary = data.PlexUpdateLibrary;
+                _configProvider.PlexServerHost = data.PlexServerHost;
+                _configProvider.PlexClientHosts = data.PlexClientHosts;
+                _configProvider.PlexUsername = data.PlexUsername;
+                _configProvider.PlexPassword = data.PlexPassword;
+
                 return GetSuccessResult();
             }
 
@@ -574,6 +592,7 @@ namespace NzbDrone.Web.Controllers
             if (ModelState.IsValid)
             {
                 _configProvider.EnableBacklogSearching = data.EnableBacklogSearching;
+                _configProvider.AutoIgnorePreviouslyDownloadedEpisodes = data.AutoIgnorePreviouslyDownloadedEpisodes;
 
                 return GetSuccessResult();
             }
@@ -588,7 +607,7 @@ namespace NzbDrone.Web.Controllers
 
         private JsonResult GetInvalidModelResult()
         {
-            return JsonNotificationResult.Opps("Invalid post data");
+            return JsonNotificationResult.Oops("Invalid post data");
         }
 
         private SelectList GetProwlPrioritySelectList()

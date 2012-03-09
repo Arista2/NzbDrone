@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Web.Mvc;
+using System.Web.Script.Serialization;
 using MvcMiniProfiler;
 using NzbDrone.Common.Model;
 using NzbDrone.Core;
@@ -23,25 +24,30 @@ namespace NzbDrone.Web.Controllers
         private readonly QualityProvider _qualityProvider;
         private readonly SeriesProvider _seriesProvider;
         private readonly JobProvider _jobProvider;
+        private readonly SeasonProvider _seasonProvider;
         //
         // GET: /Series/
 
         public SeriesController(SeriesProvider seriesProvider, EpisodeProvider episodeProvider,
-                                QualityProvider qualityProvider, JobProvider jobProvider)
+                                QualityProvider qualityProvider, JobProvider jobProvider,
+                                SeasonProvider seasonProvider)
         {
             _seriesProvider = seriesProvider;
             _episodeProvider = episodeProvider;
             _qualityProvider = qualityProvider;
             _jobProvider = jobProvider;
+            _seasonProvider = seasonProvider;
         }
 
         public ActionResult Index()
         {
-            var series = GetSeriesModels(_seriesProvider.GetAllSeriesWithEpisodeCount()).OrderBy(o => SortHelper.SkipArticles(o.Title)).ToList();
-            return View(series);
+            var series = GetSeriesModels(_seriesProvider.GetAllSeriesWithEpisodeCount());
+            var serialized = new JavaScriptSerializer().Serialize(series);
+
+            return View((object)serialized);
         }
 
-        public ActionResult SeriesEditor(int seriesId)
+        public ActionResult SingleSeriesEditor(int seriesId)
         {
             var profiles = _qualityProvider.All();
             ViewData["SelectList"] = new SelectList(profiles, "QualityProfileId", "Name");
@@ -60,7 +66,7 @@ namespace NzbDrone.Web.Controllers
         }
 
         [HttpPost]
-        public EmptyResult SaveSeriesEditor(SeriesModel seriesModel)
+        public EmptyResult SaveSingleSeriesEditor(SeriesModel seriesModel)
         {
             var series = _seriesProvider.GetSeries(seriesModel.SeriesId);
             series.Monitored = seriesModel.Monitored;
@@ -114,43 +120,32 @@ namespace NzbDrone.Web.Controllers
             model.SeriesId = series.SeriesId;
             model.HasBanner = !String.IsNullOrEmpty(series.BannerUrl);
 
-            var seasons = new List<SeasonModel>();
-            var episodes = _episodeProvider.GetEpisodeBySeries(seriesId);
-
-            foreach (var season in episodes.Select(s => s.SeasonNumber).Distinct())
-            {
-                var episodesInSeason = episodes.Where(e => e.SeasonNumber == season).ToList();
-                var commonStatusList = episodesInSeason.Select(s => s.Status).Distinct().ToList();
-                var commonStatus = commonStatusList.Count > 1 ? "Missing" : commonStatusList.First().ToString();
-
-                seasons.Add(new SeasonModel
-                                      {
-                                            SeriesId = seriesId,
-                                            SeasonNumber = season,
-                                            Episodes = GetEpisodeModels(episodesInSeason).OrderByDescending(e=> e.EpisodeNumber).ToList(),
-                                            AnyWanted = episodesInSeason.Any(e => !e.Ignored),
-                                            CommonStatus = commonStatus
-                                      });
-            }
-
+            var seasons = _seasonProvider.All(seriesId).Select(s => new SeasonModel
+                                                                    {
+                                                                        SeriesId = seriesId,
+                                                                        SeasonNumber = s.SeasonNumber,
+                                                                        Ignored = s.Ignored,
+                                                                        Episodes = GetEpisodeModels(s.Episodes).OrderByDescending(e => e.EpisodeNumber).ToList(),
+                                                                        CommonStatus = GetCommonStatus(s.Episodes)
+                                                                    }).ToList();
             model.Seasons = seasons;
   
             return View(model);
         }
 
-        public ActionResult MassEdit()
+        public ActionResult Editor()
         {
             var profiles = _qualityProvider.All();
             ViewData["QualityProfiles"] = profiles;
 
             //Create the select lists
             var masterProfiles = profiles.ToList();
-            masterProfiles.Insert(0, new QualityProfile {QualityProfileId = -10, Name = "Unchanged"});
+            masterProfiles.Insert(0, new QualityProfile {QualityProfileId = -10, Name = "Select..."});
             ViewData["MasterProfileSelectList"] = new SelectList(masterProfiles, "QualityProfileId", "Name");
 
             ViewData["BoolSelectList"] = new SelectList(new List<KeyValuePair<int, string>>
                                                             {
-                                                                    new KeyValuePair<int, string>(-10, "Unchanged"),
+                                                                    new KeyValuePair<int, string>(-10, "Select..."),
                                                                     new KeyValuePair<int, string>(1, "True"),
                                                                     new KeyValuePair<int, string>(0, "False")
                                                             }, "Key", "Value"
@@ -166,7 +161,7 @@ namespace NzbDrone.Web.Controllers
             ViewData["BacklogSettingTypes"] = backlogSettingTypes;
 
             var masterBacklogList = backlogSettingTypes.ToList();
-            masterBacklogList.Insert(0, new KeyValuePair<int, string>(-10, "Unchanged"));
+            masterBacklogList.Insert(0, new KeyValuePair<int, string>(-10, "Select..."));
             ViewData["MasterBacklogSettingSelectList"] = new SelectList(masterBacklogList, "Key", "Value");
 
             var series = _seriesProvider.GetAllSeries().OrderBy(o => SortHelper.SkipArticles(o.Title));
@@ -175,13 +170,13 @@ namespace NzbDrone.Web.Controllers
         }
 
         [HttpPost]
-        public JsonResult SaveMassEdit(List<Series> series)
+        public JsonResult SaveEditor(List<Series> series)
         {
             //Save edits
             if (series == null || series.Count == 0)
-                return JsonNotificationResult.Opps("Invalid post data");
+                return JsonNotificationResult.Oops("Invalid post data");
 
-            _seriesProvider.UpdateFromMassEdit(series);
+            _seriesProvider.UpdateFromSeriesEditor(series);
             return JsonNotificationResult.Info("Series Mass Edit Saved");
         }
 
@@ -191,19 +186,22 @@ namespace NzbDrone.Web.Controllers
                                                     {
                                                         SeriesId = s.SeriesId,
                                                         Title = s.Title,
+                                                        TitleSorter = SortHelper.SkipArticles(s.Title),
                                                         AirsDayOfWeek = s.AirsDayOfWeek.ToString(),
                                                         Monitored = s.Monitored,
                                                         Overview = s.Overview,
                                                         Path = s.Path,
                                                         QualityProfileId = s.QualityProfileId,
                                                         QualityProfileName = s.QualityProfile.Name,
+                                                        Network = s.Network,
                                                         SeasonFolder = s.SeasonFolder,
                                                         BacklogSetting = (int)s.BacklogSetting,
                                                         Status = s.Status,
                                                         SeasonsCount = s.SeasonCount,
                                                         EpisodeCount = s.EpisodeCount,
                                                         EpisodeFileCount = s.EpisodeFileCount,
-                                                        NextAiring = s.NextAiring == null ? String.Empty : s.NextAiring.Value.ToBestDateString()
+                                                        NextAiring = s.NextAiring == null ? String.Empty : s.NextAiring.Value.ToBestDateString(),
+                                                        NextAiringSorter = s.NextAiring == null ? "12/31/9999" : s.NextAiring.Value.ToString("MM/dd/yyyy")
                                                     }).ToList();
 
             return series;
@@ -240,7 +238,6 @@ namespace NzbDrone.Web.Controllers
                                      Overview = e.Overview,
                                      AirDate = airDate,
                                      Path = episodePath,
-                                     EpisodeFileId = episodeFileId,
                                      Status = e.Status.ToString(),
                                      Quality = episodeQuality,
                                      Ignored = e.Ignored
@@ -248,6 +245,13 @@ namespace NzbDrone.Web.Controllers
             }
 
             return episodes;
+        }
+
+        private string GetCommonStatus(IList<Episode> episodes)
+        {
+            var commonStatusList = episodes.Select(s => s.Status).Distinct().ToList();
+            var commonStatus = commonStatusList.Count > 1 ? "Missing" : commonStatusList.First().ToString();
+            return commonStatus;
         }
     }
 }

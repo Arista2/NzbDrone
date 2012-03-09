@@ -1,35 +1,31 @@
-﻿@using NzbDrone.Web.Helpers
-@model NzbDrone.Web.Models.NotificationSettingsModel
-@{ Layout = "~/Views/Shared/_ReferenceLayout.cshtml"; }
-@section HeaderContent{
-    @Html.IncludeCss("Settings.css")
-    <style>
-        .notifier
-        {
-            overflow: auto;
-        }
-        
-        .notifier h4
-        {
-            font-weight: bold;
-            margin-bottom: 0px;
-            padding-left: 5px;
-            padding-top: 3px;
-        }
-        
-        #save_button
-        {
-            margin-top: 10px;
-        }
-        
-        #smtpTest
-        {
-            margin-top: 10px;
-            margin-bottom: 10px;
-            margin-left: 220px;
-        }
-    </style>
-}
+﻿@model NzbDrone.Web.Models.NotificationSettingsModel
+@{ Layout = null; }
+<style>
+    .notifier
+    {
+        overflow: auto;
+    }
+    
+    .notifier h4
+    {
+        font-weight: bold;
+        margin-bottom: 0px;
+        padding-left: 5px;
+        padding-top: 3px;
+    }
+    
+    #save_button
+    {
+        margin-top: 10px;
+    }
+    
+    #smtpTest
+    {
+        margin-top: 10px;
+        margin-bottom: 10px;
+        margin-left: 220px;
+    }
+</style>
 <div id="stylized">
     @using (Html.BeginForm("SaveNotifications", "Settings", FormMethod.Post, new { id = "NotificationForm", name = "NotificationForm", @class = "settingsForm" }))
     {
@@ -38,112 +34,147 @@
                 <a href="#">XBMC</a></h3>
             @{Html.RenderPartial("Xbmc", Model);}
             <h3>
-                <a href="#">SMTP</a></h3>
-            @{Html.RenderPartial("Smtp", Model);}
-            <h3>
-                <a href="#">Twitter</a></h3>
-            @{Html.RenderPartial("Twitter", Model);}
+                <a href="#">Plex</a></h3>
+            @{Html.RenderPartial("Plex", Model);}
             <h3>
                 <a href="#">Growl</a></h3>
             @{Html.RenderPartial("Growl", Model);}
             <h3>
                 <a href="#">Prowl</a></h3>
             @{Html.RenderPartial("Prowl", Model);}
+            <h3>
+                <a href="#">Email</a></h3>
+            @{Html.RenderPartial("Smtp", Model);}
+            <h3>
+                <a href="#">Twitter</a></h3>
+            @{Html.RenderPartial("Twitter", Model);}
         </div>
             
         <button type="submit" class="save_button" disabled="disabled">
             Save</button>
     }
 </div>
-@section Scripts{
-    <script type="text/javascript">
-        //Twitter
-        getAuthorizationUrl = '../Command/GetTwitterAuthorization';
-        verifyAuthorizationUrl = '../Command/VerifyTwitterAuthorization';
+<script type="text/javascript">
+    $(document).ready(function () {
+        //Allow unobstrusive validation of the AJAX loaded form
+        $.validator.unobtrusive.parse('#NotificationForm');
 
-        function requestTwitterAuthorization() {
-            $.ajax({
-                type: "GET",
-                url: getAuthorizationUrl,
-                error: function (req, status, error) {
-                    alert("Sorry! We could get Twitter Authorization at this time. " + error);
-                },
-                success: function (data, textStatus, jqXHR) {
-                    if (data.IsMessage)
-                        return false;
+        //Validator Settings
+        var settings = $.data($('#NotificationForm')[0], 'validator').settings;
+        settings.ignore = [];
+        settings.focusInvalid = false;
+        settings.onfocusout = function (element) { $(element).valid(); };
 
-                    $('#authorizationRequestToken').val(data.Token);
-                    window.open(data.Url);
-                }
-            });
-        }
+        var oldHighlight = settings.highlight;
+        var oldUnhighlight = settings.unhighlight;
 
-        function verifyTwitterAuthorization() {
-            var token = $('#authorizationRequestToken').val();
-            var verifier = $('#twitterVerification').val();
+        settings.highlight = function (element, errorClass, validClass) {
+            oldHighlight(element, errorClass, validClass);
+            $(element).parents('div.ui-accordion-content').prev('h3.ui-accordion-header').addClass('validation-error');
+        };
+        settings.unhighlight = function (element, errorClass, validClass) {
+            oldUnhighlight(element, errorClass, validClass);
 
-            $.ajax({
-                type: "GET",
-                url: verifyAuthorizationUrl,
-                data: jQuery.param({ token: token, verifier: verifier }),
-                error: function (req, status, error) {
-                    alert("Sorry! We could verify Twitter Authorization at this time. " + error);
-                }
-            });
-        }
+            var container = $(element).parents('div.ui-accordion-content');
+            if ($(container).children('.' + errorClass).length == 0)
+                $(container).prev('h3.ui-accordion-header').removeClass('validation-error');
+        };
+    });
 
-        //SMTP
-        function testSmtpSettings() {
-            //Get the variables
-            var server = $('#SmtpServer').val();
-            var port = $('#SmtpPort').val();
-            var ssl = $('#SmtpUseSsl').val();
-            var username = $('#SmtpUsername').val();
-            var password = $('#SmtpPassword').val();
-            var fromAddress = $('#SmtpFromAddress').val();
-            var toAddresses = $('#SmtpToAddresses').val();
+    $(document).on('change', '.checkClass', function () {
+        $("#NotificationForm").validate().form();
 
-            //Send the data!
-            $.ajax({
-                type: "POST",
-                url: '../Command/SendTestEmail',
-                data: jQuery.param({
-                    server: server,
-                    port: port,
-                    ssl: ssl,
-                    username: username,
-                    password: password,
-                    fromAddress: fromAddress,
-                    toAddresses: toAddresses
-                }),
-                error: function (req, status, error) {
-                    alert("Sorry! We could send a test email at this time. " + error);
-                }
-            });
+        var container = $('div.ui-accordion-content');
+        if ($(container).children('.input-validation-error').length == 0)
+            $(container).prev('h3.ui-accordion-header').removeClass('validation-error');
+    });
 
-            return false;
-        }
+    //Twitter
+    getAuthorizationUrl = '../Command/GetTwitterAuthorization';
+    verifyAuthorizationUrl = '../Command/VerifyTwitterAuthorization';
 
-        //Growl
-        function registerGrowl() {
-            //Get the variables
-            var host = $('#GrowlHost').val();
-            var password = $('#GrowlPassword').val();
+    function requestTwitterAuthorization() {
+        $.ajax({
+            type: "GET",
+            url: getAuthorizationUrl,
+            error: function (req, status, error) {
+                alert("Sorry! We could get Twitter Authorization at this time. " + error);
+            },
+            success: function (data, textStatus, jqXHR) {
+                if (data.IsMessage)
+                    return false;
 
-            //Send the data!
-            $.ajax({
-                type: "POST",
-                url: '../Command/RegisterGrowl',
-                data: jQuery.param({
-                    host: host,
-                    password: password
-                }),
-                error: function (req, status, error) {
-                    alert("Sorry! We could send a test email at this time. " + error);
-                }
-            });
+                $('#authorizationRequestToken').val(data.Token);
+                window.open(data.Url);
+            }
+        });
+    }
 
-            return false;
-        }
-    </script>
-}
+    function verifyTwitterAuthorization() {
+        var token = $('#authorizationRequestToken').val();
+        var verifier = $('#twitterVerification').val();
+
+        $.ajax({
+            type: "GET",
+            url: verifyAuthorizationUrl,
+            data: jQuery.param({ token: token, verifier: verifier }),
+            error: function (req, status, error) {
+                alert("Sorry! We could verify Twitter Authorization at this time. " + error);
+            }
+        });
+    }
+
+    //SMTP
+    function testSmtpSettings() {
+        //Get the variables
+        var server = $('#SmtpServer').val();
+        var port = $('#SmtpPort').val();
+        var ssl = $('#SmtpUseSsl').val();
+        var username = $('#SmtpUsername').val();
+        var password = $('#SmtpPassword').val();
+        var fromAddress = $('#SmtpFromAddress').val();
+        var toAddresses = $('#SmtpToAddresses').val();
+
+        //Send the data!
+        $.ajax({
+            type: "POST",
+            url: '../Command/SendTestEmail',
+            data: jQuery.param({
+                server: server,
+                port: port,
+                ssl: ssl,
+                username: username,
+                password: password,
+                fromAddress: fromAddress,
+                toAddresses: toAddresses
+            }),
+            error: function (req, status, error) {
+                alert("Sorry! We could send a test email at this time. " + error);
+            }
+        });
+
+        return false;
+    }
+
+    //Growl
+    function registerGrowl() {
+        //Get the variables
+        var host = $('#GrowlHost').val();
+        var password = $('#GrowlPassword').val();
+
+        //Send the data!
+        $.ajax({
+            type: "POST",
+            url: '../Command/RegisterGrowl',
+            data: jQuery.param({
+                host: host,
+                password: password
+            }),
+            error: function (req, status, error) {
+                alert("Sorry! We could send a test email at this time. " + error);
+            }
+        });
+
+        return false;
+    }
+</script>

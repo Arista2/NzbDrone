@@ -5,64 +5,74 @@
 
 @section HeaderContent
 {
-    @Html.IncludeCss("Grid.css")
+    @Html.IncludeCss("Settings.css")
+    <style>
+        .seasonToggleTopGroup
+        {
+            overflow: hidden;
+        }
+    
+        .seasonToggleTop
+        {
+            background-color: #F0F5FF;
+            background-position: 5px center;
+            background-repeat: no-repeat;
+            display: inline-block;
+            font-size: 15px;
+            margin: 2px;
+            padding: 2px 5px;
+            width: 100px;
+        }
+    
+        .seasonToggleLabel
+        {
+            margin-left: 5px;
+            color: black;
+            text-decoration: none;
+        }
+        
+        .seasonToggleLabel:hover {
+            color: #065EFE;
+        }
+        
+        .seasonToggleTop .ignoredEpisodesMaster
+        {
+            padding-left: 0px;
+            padding-right: 0px;
+            border-style: none;
+        }
+    
+        #banner-container
+        {
+            width: 758px;
+            height: 140px;
+            padding: 0px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+   
+        .seasonSection
+        {
+            margin-top: 50px;
+        }
+        
+        .ui-dialog-buttonpane .ui-dialog-buttonset .ui-delete-button
+        {
+            margin-right: 445px;
+        }
+    </style>
 }
 @{ ViewBag.Title = Model.Title; }
-<style>
-    .seasonToggleTopGroup
-    {
-        overflow: hidden;
-    }
-    
-    .seasonToggleTop
-    {
-        background-color: #F1EDED;
-        background-position: 5px center;
-        background-repeat: no-repeat;
-        display: inline-block;
-        font-size: 15px;
-        margin: 2px;
-        padding: 2px 5px;
-        width: 100px;
-    }
-    
-    .seasonToggleLabel
-    {
-        margin-left: 5px;
-        color: black;
-        text-decoration: none;
-    }
-        
-    .seasonToggleTop .ignoredEpisodesMaster
-    {
-        padding-left: 0px;
-        padding-right: 0px;
-        border-style: none;
-    }
-    
-    #banner-container
-    {
-        width: 758px;
-        height: 140px;
-        padding: 0px;
-        margin-top: 10px;
-        margin-bottom: 15px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-   
-    .seasonSection
-    {
-        margin-top: 50px;
-    }
-</style>
+
 @section ActionMenu
 {
     <ul class="sub-menu">
-        <li>@Ajax.ActionLink("Scan Disk", "ScanDisk", "Command", new { seriesId = Model.SeriesId }, null)</li>
-        <li>@Ajax.ActionLink("Update Info", "UpdateInfo", "Command", new { seriesId = Model.SeriesId }, null)</li>
+        <li><a class="editButton" value="@Model.SeriesId" rel="@Model.Title">Edit</a></li>
+        <li>@Ajax.ActionLink("Force Refresh", "ForceRefresh", "Command", new { seriesId = Model.SeriesId }, null)</li>
         <li>@Ajax.ActionLink("Search for missing episodes", "BacklogSeries", "Episode", new { seriesId = Model.SeriesId }, null)</li>
-        <li>@Ajax.ActionLink("Rename Episodes", "RenameEpisodes", "Episode", new { seriesId = Model.SeriesId }, null)</li>
+        <li>@Ajax.ActionLink("Rename Episode Files", "RenameEpisodes", "Episode", new { seriesId = Model.SeriesId }, null)</li>
     </ul>
 }
 
@@ -79,8 +89,8 @@
     {
         var ignoreSeason = "ignoreSeason_" + season.SeasonNumber;
         <div class="seasonToggleTop">
-            <img src='../../Content/Images/@(season.AnyWanted ? "notIgnored" : "ignored").png'
-                 class='ignoredEpisodesMaster ignoreEpisode @ignoreSeason@(season.AnyWanted ? " " : " ignored") gridImage'
+            <img src='../../Content/Images/@(season.Ignored ? "ignored" : "notIgnored").png'
+                 class='ignoredEpisodesMaster ignoreEpisode @ignoreSeason@(season.Ignored ? " ignored" : " ") gridAction'
                  title='Click to toggle season ignore status' />
             <a href="@string.Format("#SeasonSection_{0}", season.SeasonNumber)" class="seasonToggleLabel">@(season.SeasonNumber == 0 ? "Specials" : "Season " + season.SeasonNumber)</a>
         </div>
@@ -95,9 +105,27 @@
         }
     </div>
 }
+
+<div style="visibility: hidden">
+    <div id="seriesEditor" title="Edit Series">
+    </div>
+</div>
+
 @section Scripts{
     @Html.IncludeScript("NzbDrone/seriesDetails.js")
+    @Html.IncludeScript("NzbDrone/series.js")
+    
     <script type="text/javascript">
         seriesId = @Model.SeriesId;
+
+        //Used when we delete this series
+        function afterDelete(seriesId) {
+            window.location = "/";
+        }
+        
+        //After we save do this...
+        function afterSave() {
+            //Do nothing
+        }        
     </script>
 }

@@ -30,8 +30,7 @@ namespace NzbDrone.Common
         {
             try
             {
-                if (RestProvider == null && EnviromentProvider.IsProduction)
-                    return;
+                VerifyRestProvider();
 
                 lock (parserErrorCache)
                 {
@@ -45,13 +44,13 @@ namespace NzbDrone.Common
             }
             catch (Exception e)
             {
-                if (!EnviromentProvider.IsProduction)
+                if (!EnvironmentProvider.IsProduction)
                 {
                     throw;
                 }
 
                 e.Data.Add("title", title);
-                logger.ErrorException("Unable to report parse error", e);
+                logger.InfoException("Unable to report parse error", e);
             }
         }
 
@@ -59,9 +58,8 @@ namespace NzbDrone.Common
         {
             try
             {
-                if (RestProvider == null && EnviromentProvider.IsProduction)
-                    return;
-
+                VerifyRestProvider();
+                    
                 var report = new ExceptionReport();
                 report.LogMessage = logEvent.FormattedMessage;
                 report.String = logEvent.Exception.ToString();
@@ -72,13 +70,29 @@ namespace NzbDrone.Common
             }
             catch (Exception e)
             {
-                if (!EnviromentProvider.IsProduction)
+                if (!EnvironmentProvider.IsProduction)
                 {
                     throw;
                 }
 
-                //this shouldn't log an exception since it might cause a recursive loop.
-                logger.Error("Unable to report exception. " + e);
+                //this shouldn't log an exception since it will cause a recursive loop.
+                logger.Info("Unable to report exception. " + e);
+            }
+        }
+
+        private static void VerifyRestProvider()
+        {
+            if(RestProvider == null)
+            {
+                if(EnvironmentProvider.IsProduction)
+                {
+                    logger.Warn("Rest provider wasn't provided. creating new one!");
+                    RestProvider = new RestProvider(new EnvironmentProvider());
+                }
+                else
+                {
+                    throw new InvalidOperationException("REST Provider wasn't configured correctly.");
+                }
             }
         }
     }

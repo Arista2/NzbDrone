@@ -1,6 +1,6 @@
 ﻿/* Click on row, show details */
-$('.seriesTable a, .dataTable a').live('click', function (event) {
-    if ($(this).attr('onclick'))
+$(document).on('click', '.seriesTable a, .dataTable a', function (event) {
+    if ($(this).attr('data-ajax') === "true" || $(this).attr('onclick'))
         return;
 
     event.preventDefault();
@@ -46,14 +46,6 @@ function fnFormatDetails(nTr) {
     return aData["Details"];
 }
 
-//Create Image
-function createImageAjaxLink(url, image, alt, title, classes) {
-    var html = "<a onclick=\"Sys.Mvc.AsyncHyperlink.handleClick(this, new Sys.UI.DomEvent(event), { insertionMode: Sys.Mvc.InsertionMode.replace });\" href=\"" + url + "\">" +
-                    "<img class=\"" + classes + "\" src=\"" + image + "\" title=\"" + title + "\" alt=\"" + alt + "\"></a>";
-
-    return html;
-}
-
 //Reload/Redraw the grid from the server (bServerSide == true)
 function redrawGrid() {
     oTable.fnDraw();
@@ -63,3 +55,42 @@ function redrawGrid() {
 function reloadGrid() {
     oTable.fnReloadAjax();
 }
+
+
+//SignalR
+$(function () {
+    // Proxy created on the fly
+    var signalRProvider = $.connection.signalRProvider;
+
+    // Declare a function on the chat hub so the server can invoke it
+    signalRProvider.updatedStatus = function (data) {
+        var imageSrc = '../../Content/Images/' + data.EpisodeStatus + '.png';
+        var row = $('tr.episodeId_' + data.EpisodeId);
+
+        if (row.length == 0)
+            return;
+
+        var statusImage = $(row).find('img.statusImage');
+
+        if (statusImage.length == 0)
+            return;
+
+        statusImage.attr('alt', data.EpisodeStatus);
+        statusImage.attr('title', data.EpisodeStatus);
+        statusImage.attr('src', imageSrc);
+
+        if (data.EpisodeStatus != "Missing") {
+            statusImage.parent('td').removeClass('episodeMissing');
+        }
+
+        if (data.Quality != null) {
+            var qualityColumn = $(row).find('.episodeQuality');
+            
+            if (qualityColumn)
+                qualityColumn.text(data.Quality);
+        }
+    };
+
+    // Start the connection
+    $.connection.hub.start();
+});

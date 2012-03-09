@@ -1,12 +1,7 @@
-@using NzbDrone.Web.Models
 @using NzbDrone.Web.Helpers
 @model string
 @{ViewBag.Title = "Jobs";}
 
-@section HeaderContent
-{
-    @Html.IncludeCss("Grid.css")
-}
 
 <div class="grid-container">
     <table id="jobGrid" class="dataTablesGrid hidden-grid no-details">
@@ -70,12 +65,13 @@
                             { sWidth: '150px', "mDataProp": "LastExecution" }, //LastExecution
                             { sWidth: '80px', "mDataProp": "Success" }, //Success
                             { sWidth: '40px', "mDataProp": "Actions", "bSortable": false, "fnRender": function (row) {
-                                if (!row.aData["Enable"])
-                                    return "";
+                                    if (!row.aData["Enable"])
+                                        return "";
 
-                                return createImageAjaxLink('/System/RunJob?typeName=' + row.aData["TypeName"], '../../Content/Images/Gear.png', 'Run', 'Run Job', 'gridImage');
-                                //return createImageAjaxLink('/History/Delete?historyId=' + row.aData["HistoryId"], '../../Content/Images/X.png', 'Delete', 'Delete from History', 'searchImage');
-                            }
+                                    var link = '@Ajax.ImageActionLink("../../Content/Images/Gear.png", new {  title = "Run Job", alt = "Job", @class = "gridAction" }, "RunJob", "System", new { typeName = "REPLACE" }, null, null)';
+                                    link = link.replace("REPLACE", row.aData["TypeName"]);
+                                    return link;
+                                }
                             } //Actions
             ],
                 "aaSorting": [[4, 'asc']]

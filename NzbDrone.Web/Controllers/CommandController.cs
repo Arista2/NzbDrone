@@ -16,10 +16,11 @@ namespace NzbDrone.Web.Controllers
         private readonly TwitterProvider _twitterProvider;
         private readonly EpisodeProvider _episodeProvider;
         private readonly GrowlProvider _growlProvider;
+        private readonly SeasonProvider _seasonProvider;
 
         public CommandController(JobProvider jobProvider, SabProvider sabProvider,
                                     SmtpProvider smtpProvider, TwitterProvider twitterProvider,
-                                    EpisodeProvider episodeProvider, GrowlProvider growlProvider)
+                                    EpisodeProvider episodeProvider, GrowlProvider growlProvider, SeasonProvider seasonProvider)
         {
             _jobProvider = jobProvider;
             _sabProvider = sabProvider;
@@ -27,36 +28,33 @@ namespace NzbDrone.Web.Controllers
             _twitterProvider = twitterProvider;
             _episodeProvider = episodeProvider;
             _growlProvider = growlProvider;
+            _seasonProvider = seasonProvider;
         }
 
         public JsonResult RssSync()
         {
             _jobProvider.QueueJob(typeof(RssSyncJob));
-            return JsonNotificationResult.Info("Queued");
+            return JsonNotificationResult.Queued("RSS sync");
         }
 
         public JsonResult BacklogSearch()
         {
             _jobProvider.QueueJob(typeof(BacklogSearchJob));
-            return JsonNotificationResult.Info("Queued");
+            return JsonNotificationResult.Queued("Backlog search");
         }
 
         public JsonResult RecentBacklogSearch()
         {
             _jobProvider.QueueJob(typeof(RecentBacklogSearchJob));
-            return JsonNotificationResult.Info("Queued");
+            return JsonNotificationResult.Queued("Recent backlog search");
         }
 
-        public JsonResult ScanDisk(int seriesId)
-        {
-            _jobProvider.QueueJob(typeof(DiskScanJob), seriesId);
-            return JsonNotificationResult.Info("Queued");
-        }
-
-        public JsonResult UpdateInfo(int seriesId)
+        public JsonResult ForceRefresh(int seriesId)
         {
             _jobProvider.QueueJob(typeof(UpdateInfoJob), seriesId);
-            return JsonNotificationResult.Info("Queued");
+            _jobProvider.QueueJob(typeof(DiskScanJob), seriesId);
+
+            return JsonNotificationResult.Queued("Episode update/Disk scan");
         }
 
         [HttpPost]
@@ -70,9 +68,9 @@ namespace NzbDrone.Web.Controllers
         public JsonResult SendTestEmail(string server, int port, bool ssl, string username, string password, string fromAddress, string toAddresses)
         {
             if (_smtpProvider.SendTestEmail(server, port, ssl, username, password, fromAddress, toAddresses))
-                JsonNotificationResult.Info("Successfull", "Test email sent.");
+                JsonNotificationResult.Info("Successful", "Test email sent.");
 
-            return JsonNotificationResult.Opps("Couldn't send Email, please check your settings");
+            return JsonNotificationResult.Oops("Couldn't send Email, please check your settings");
         }
 
         public JsonResult GetTwitterAuthorization()
@@ -80,7 +78,7 @@ namespace NzbDrone.Web.Controllers
             var result = _twitterProvider.GetAuthorization();
 
             if (result == null)
-                JsonNotificationResult.Opps("Couldn't get Twitter Authorization");
+                JsonNotificationResult.Oops("Couldn't get Twitter Authorization");
 
             return new JsonResult { Data = result, JsonRequestBehavior = JsonRequestBehavior.AllowGet };
         }
@@ -90,7 +88,7 @@ namespace NzbDrone.Web.Controllers
             var result = _twitterProvider.GetAndSaveAccessToken(token, verifier);
 
             if (!result)
-                JsonNotificationResult.Opps("Couldn't verify Twitter Authorization");
+                JsonNotificationResult.Oops("Couldn't verify Twitter Authorization");
 
             return JsonNotificationResult.Info("Good News!", "Successfully verified Twitter Authorization.");
 
@@ -111,14 +109,14 @@ namespace NzbDrone.Web.Controllers
             }
             catch(Exception ex)
             {
-                return JsonNotificationResult.Opps("Couldn't register and test Growl");
+                return JsonNotificationResult.Oops("Couldn't register and test Growl");
             }
         }
 
         [HttpPost]
         public EmptyResult SaveSeasonIgnore(int seriesId, int seasonNumber, bool ignored)
         {
-            _episodeProvider.SetSeasonIgnore(seriesId, seasonNumber, ignored);
+            _seasonProvider.SetIgnore(seriesId, seasonNumber, ignored);
             return new EmptyResult();
         }
 

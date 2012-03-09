@@ -12,6 +12,12 @@ namespace NzbDrone.Services.Tests
     [TestFixture]
     public class ReportingControllerFixture : ServicesTestBase
     {
+        [SetUp]
+        public void Setup()
+        {
+            WithRealDb();
+            Mocker.Resolve<ExceptionController>();
+        }
 
         ReportingController Controller
         {
@@ -64,6 +70,24 @@ namespace NzbDrone.Services.Tests
                             Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
                             Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
                             Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
+                            Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message
                             Long message Long message Long messageLong messageLong messageLong messageLong messageLong messageLong messageLong messageLong message",
 
                 Type = typeof(InvalidOperationException).Name
@@ -76,7 +100,6 @@ namespace NzbDrone.Services.Tests
         {
             var parseReport = CreateParseErrorReport();
 
-            WithRealDb();
 
             Controller.ParseError(parseReport);
 
@@ -97,7 +120,6 @@ namespace NzbDrone.Services.Tests
 
             parseReport1.Title = Guid.NewGuid().ToString();
 
-            WithRealDb();
 
             Controller.ParseError(parseReport1);
             Controller.ParseError(parseReport2);
@@ -112,35 +134,12 @@ namespace NzbDrone.Services.Tests
             var parseReport1 = CreateParseErrorReport();
             var parseReport2 = CreateParseErrorReport();
 
-            WithRealDb();
 
             Controller.ParseError(parseReport1);
             Controller.ParseError(parseReport2);
 
             var reports = Db.Fetch<ParseErrorRow>();
             reports.Should().HaveCount(1);
-        }
-
-        [Test]
-        public void exception_report_should_be_saved()
-        {
-            var exceptionReport = CreateExceptionReport();
-
-            WithRealDb();
-
-            Controller.ReportException(exceptionReport);
-
-            var exceptionRows = Db.Fetch<ExceptionRow>();
-            exceptionRows.Should().HaveCount(1);
-            exceptionRows.Single().IsProduction.Should().Be(exceptionReport.IsProduction);
-            exceptionRows.Single().Version.Should().Be(exceptionReport.Version);
-            exceptionRows.Single().Timestamp.Should().BeWithin(TimeSpan.FromSeconds(4)).Before(DateTime.Now);
-            exceptionRows.Single().UGuid.Should().Be(exceptionReport.UGuid);
-
-            exceptionRows.Single().Logger.Should().Be(exceptionReport.Logger);
-            exceptionRows.Single().LogMessage.Should().Be(exceptionReport.LogMessage);
-            exceptionRows.Single().String.Should().Be(exceptionReport.String);
-            exceptionRows.Single().Type.Should().Be(exceptionReport.Type);
         }
     }
 }

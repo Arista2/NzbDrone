@@ -19,15 +19,18 @@ namespace NzbDrone.Core.Providers
         private readonly TvDbProvider _tvDbProvider;
         private readonly IDatabase _database;
         private readonly SceneMappingProvider _sceneNameMappingProvider;
+        private readonly BannerProvider _bannerProvider;
         private static readonly Regex TimeRegex = new Regex(@"^(?<time>\d+:?\d*)\W*(?<meridiem>am|pm)?", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public SeriesProvider(IDatabase database, ConfigProvider configProviderProvider,
-                                TvDbProvider tvDbProviderProvider, SceneMappingProvider sceneNameMappingProvider)
+                                TvDbProvider tvDbProviderProvider, SceneMappingProvider sceneNameMappingProvider,
+                                BannerProvider bannerProvider)
         {
             _database = database;
             _configProvider = configProviderProvider;
             _tvDbProvider = tvDbProviderProvider;
             _sceneNameMappingProvider = sceneNameMappingProvider;
+            _bannerProvider = bannerProvider;
         }
 
         public SeriesProvider()
@@ -46,7 +49,7 @@ namespace NzbDrone.Core.Providers
         {
             var series = _database
           .Fetch<Series, QualityProfile>(@"SELECT Series.SeriesId, Series.Title, Series.CleanTitle, Series.Status, Series.Overview, Series.AirsDayOfWeek,Series.AirTimes,
-                                            Series.Language, Series.Path, Series.Monitored, Series.QualityProfileId, Series.SeasonFolder, Series.BacklogSetting,
+                                            Series.Language, Series.Path, Series.Monitored, Series.QualityProfileId, Series.SeasonFolder, Series.BacklogSetting, Series.Network,
                                             SUM(CASE WHEN Ignored = 0 AND Airdate <= @0 THEN 1 ELSE 0 END) AS EpisodeCount,
                                             SUM(CASE WHEN Episodes.Ignored = 0 AND Episodes.EpisodeFileId > 0 AND Episodes.AirDate <= @0 THEN 1 ELSE 0 END) as EpisodeFileCount,
                                             MAX(Episodes.SeasonNumber) as SeasonCount, MIN(CASE WHEN AirDate < @0 OR Ignored = 1 THEN NULL ELSE AirDate END) as NextAiring,
@@ -55,8 +58,8 @@ namespace NzbDrone.Core.Providers
                                             INNER JOIN QualityProfiles ON Series.QualityProfileId = QualityProfiles.QualityProfileId
                                             LEFT JOIN Episodes ON Series.SeriesId = Episodes.SeriesId
                                             WHERE Series.LastInfoSync IS NOT NULL
-                                            GROUP BY Series.SeriesId, Series.Title, Series.CleanTitle, Series.Status, Series.Overview, Series.AirsDayOfWeek,Series.AirTimes,
-                                            Series.Language, Series.Path, Series.Monitored, Series.QualityProfileId, Series.SeasonFolder, Series.BacklogSetting,
+                                            GROUP BY Series.SeriesId, Series.Title, Series.CleanTitle, Series.Status, Series.Overview, Series.AirsDayOfWeek, Series.AirTimes,
+                                            Series.Language, Series.Path, Series.Monitored, Series.QualityProfileId, Series.SeasonFolder, Series.BacklogSetting, Series.Network,
                                             QualityProfiles.QualityProfileId, QualityProfiles.Name, QualityProfiles.Cutoff, QualityProfiles.SonicAllowed", DateTime.Today);
 
             return series;
@@ -97,12 +100,13 @@ namespace NzbDrone.Core.Providers
             series.LastInfoSync = DateTime.Now;
             series.Runtime = (int)tvDbSeries.Runtime;
             series.BannerUrl = tvDbSeries.BannerPath;
+            series.Network = tvDbSeries.Network;
 
             UpdateSeries(series);
             return series;
         }
 
-        public virtual void AddSeries(string path, int tvDbSeriesId, int qualityProfileId)
+        public virtual void AddSeries(string title, string path, int tvDbSeriesId, int qualityProfileId)
         {
             Logger.Info("Adding Series [{0}] Path: [{1}]", tvDbSeriesId, path);
 
@@ -116,6 +120,7 @@ namespace NzbDrone.Core.Providers
             repoSeries.Path = path;
             repoSeries.Monitored = true; //New shows should be monitored
             repoSeries.QualityProfileId = qualityProfileId;
+            repoSeries.Title = title;
             if (qualityProfileId == 0)
                 repoSeries.QualityProfileId = _configProvider.DefaultQualityProfile;
 
@@ -173,6 +178,9 @@ namespace NzbDrone.Core.Providers
                 Logger.Debug("Deleting EpisodeFiles from DB for Series: {0}", series.Title);
                 _database.Delete<EpisodeFile>("WHERE SeriesId=@0", seriesId);
 
+                Logger.Debug("Deleting Seasons from DB for Series: {0}", series.Title);
+                _database.Delete<Season>("WHERE SeriesId=@0", seriesId);
+
                 Logger.Debug("Deleting Episodes from DB for Series: {0}", series.Title);
                 _database.Delete<Episode>("WHERE SeriesId=@0", seriesId);
 
@@ -183,6 +191,9 @@ namespace NzbDrone.Core.Providers
 
                 tran.Complete();
             }
+
+            Logger.Trace("Beginning deletion of banner for SeriesID: ", seriesId);
+            _bannerProvider.Delete(seriesId);
         }
 
         public virtual bool SeriesPathExists(string path)
@@ -201,7 +212,7 @@ namespace NzbDrone.Core.Providers
             return series;
         }
 
-        public virtual void UpdateFromMassEdit(IList<Series> editedSeries)
+        public virtual void UpdateFromSeriesEditor(IList<Series> editedSeries)
         {
             var allSeries = GetAllSeries();
 

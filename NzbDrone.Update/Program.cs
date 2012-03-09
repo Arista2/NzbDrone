@@ -2,8 +2,6 @@
 using System.IO;
 using System.Linq;
 using NLog;
-using NLog.Config;
-using NLog.Targets;
 using Ninject;
 using NzbDrone.Common;
 using NzbDrone.Update.Providers;
@@ -29,11 +27,12 @@ namespace NzbDrone.Update
             try
             {
                 Console.WriteLine("Starting NzbDrone Update Client");
-
-                InitLoggers();
                 _kernel = new StandardKernel();
+                InitLoggers();
 
-                logger.Info("Updating NzbDrone to version {0}", _kernel.Get<EnviromentProvider>().Version);
+   
+
+                logger.Info("Updating NzbDrone to version {0}", _kernel.Get<EnvironmentProvider>().Version);
                 _kernel.Get<Program>().Start(args);
             }
             catch (Exception e)
@@ -49,10 +48,10 @@ namespace NzbDrone.Update
         {
             try
             {
-                var enviromentProvider = _kernel.Get<EnviromentProvider>();
+                var environmentProvider = _kernel.Get<EnvironmentProvider>();
                 var diskProvider = _kernel.Get<DiskProvider>();
                 logger.Info("Copying log files to application directory.");
-                diskProvider.CopyDirectory(enviromentProvider.GetSandboxLogFolder(), enviromentProvider.GetUpdateLogFolder());
+                diskProvider.CopyDirectory(environmentProvider.GetSandboxLogFolder(), environmentProvider.GetUpdateLogFolder());
             }
             catch (Exception e)
             {
@@ -62,12 +61,14 @@ namespace NzbDrone.Update
 
         private static void InitLoggers()
         {
+            ReportingService.RestProvider = _kernel.Get<RestProvider>();
+
             LogConfiguration.RegisterRemote();
 
             LogConfiguration.RegisterConsoleLogger(LogLevel.Trace);
             LogConfiguration.RegisterUdpLogger();
 
-            var logPath = Path.Combine(new EnviromentProvider().GetSandboxLogFolder(), DateTime.Now.ToString("yyyy.MM.dd-H-mm") + ".txt");
+            var logPath = Path.Combine(new EnvironmentProvider().GetSandboxLogFolder(), DateTime.Now.ToString("yyyy.MM.dd-H-mm") + ".txt");
             LogConfiguration.RegisterFileLogger(logPath, LogLevel.Info);
             
             LogConfiguration.Reload();

@@ -8,15 +8,16 @@ namespace NzbDrone.Core.Jobs
 {
     public class SeriesSearchJob : IJob
     {
-        private readonly EpisodeProvider _episodeProvider;
         private readonly SeasonSearchJob _seasonSearchJob;
+        private readonly SeasonProvider _seasonProvider;
 
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        public SeriesSearchJob(EpisodeProvider episodeProvider, SeasonSearchJob seasonSearchJob)
+        public SeriesSearchJob(SeasonSearchJob seasonSearchJob,
+                                SeasonProvider seasonProvider)
         {
-            _episodeProvider = episodeProvider;
             _seasonSearchJob = seasonSearchJob;
+            _seasonProvider = seasonProvider;
         }
 
         public string Name
@@ -34,16 +35,15 @@ namespace NzbDrone.Core.Jobs
             if (targetId <= 0)
                 throw new ArgumentOutOfRangeException("targetId");
 
-            Logger.Debug("Getting seasons from database for series: {0}", targetId);
-            var seasons = _episodeProvider.GetSeasons(targetId).Where(s => s > 0);
+            logger.Debug("Getting seasons from database for series: {0}", targetId);
+            var seasons = _seasonProvider.GetSeasons(targetId).Where(s => s > 0);
 
             foreach (var season in seasons)
             {
-                //Skip ignored seasons
-                if (_episodeProvider.IsIgnored(targetId, season))
-                    continue;
-
-                _seasonSearchJob.Start(notification, targetId, season);
+                if (!_seasonProvider.IsIgnored(targetId, season))
+                {
+                    _seasonSearchJob.Start(notification, targetId, season);
+                }
             }
         }
     }

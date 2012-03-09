@@ -29,9 +29,14 @@ namespace NzbDrone.Web.Models
             return GetJsonResult(NotificationType.Error, title, text);
         }
 
-        public static JsonResult Opps(string text)
+        public static JsonResult Oops(string text)
         {
-            return GetJsonResult(NotificationType.Error, "Opps!", text);
+            return GetJsonResult(NotificationType.Error, "Oops!", text);
+        }
+
+        public static JsonResult Queued(string task)
+        {
+            return GetJsonResult(NotificationType.Info, "Added to queue", string.Format("{0} will start soon.", task.Trim()));
         }
 
 

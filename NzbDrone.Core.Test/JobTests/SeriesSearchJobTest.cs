@@ -23,10 +23,10 @@ namespace NzbDrone.Core.Test.JobTests
 
             var notification = new ProgressNotification("Series Search");
 
-            Mocker.GetMock<EpisodeProvider>()
+            Mocker.GetMock<SeasonProvider>()
                 .Setup(c => c.GetSeasons(1)).Returns(seasons);
 
-            Mocker.GetMock<EpisodeProvider>()
+            Mocker.GetMock<SeasonProvider>()
                 .Setup(c => c.IsIgnored(It.IsAny<int>(), It.IsAny<int>())).Returns(false);
 
             Mocker.GetMock<SeasonSearchJob>()
@@ -50,7 +50,7 @@ namespace NzbDrone.Core.Test.JobTests
 
             var notification = new ProgressNotification("Series Search");
 
-            Mocker.GetMock<EpisodeProvider>()
+            Mocker.GetMock<SeasonProvider>()
                 .Setup(c => c.GetSeasons(1)).Returns(seasons);
 
             //Act
@@ -65,7 +65,7 @@ namespace NzbDrone.Core.Test.JobTests
         [Test]
         public void SeriesSearch_should_not_search_for_season_0()
         {
-            Mocker.GetMock<EpisodeProvider>()
+            Mocker.GetMock<SeasonProvider>()
                 .Setup(c => c.GetSeasons(It.IsAny<int>()))
                 .Returns(new List<int> { 0, 1, 2 });
 

@@ -413,6 +413,12 @@ namespace NzbDrone.Core.Providers.Core
             set { SetValue("AutoIgnorePreviouslyDownloadedEpisodes", value); }
         }
 
+        public virtual int Retention
+        {
+            get { return GetValueInt("Retention", 0); }
+            set { SetValue("Retention", value); }
+        }
+
         public Guid UGuid
         {
             get { return Guid.Parse(GetValue("UGuid", Guid.NewGuid().ToString(), persist: true)); }
@@ -434,6 +440,51 @@ namespace NzbDrone.Core.Providers.Core
         public virtual string ServiceRootUrl
         {
             get { return "http://services.nzbdrone.com"; }
+        }
+
+        public virtual Boolean PlexNotifyOnGrab
+        {
+            get { return GetValueBoolean("PlexNotifyOnGrab"); }
+
+            set { SetValue("PlexNotifyOnGrab", value); }
+        }
+
+        public virtual Boolean PlexNotifyOnDownload
+        {
+            get { return GetValueBoolean("PlexNotifyOnDownload"); }
+
+            set { SetValue("PlexNotifyOnDownload", value); }
+        }
+
+        public virtual Boolean PlexUpdateLibrary
+        {
+            get { return GetValueBoolean("PlexUpdateLibrary"); }
+
+            set { SetValue("PlexUpdateLibrary", value); }
+        }
+
+        public virtual string PlexServerHost
+        {
+            get { return GetValue("PlexServerHost", "localhost:32400"); }
+            set { SetValue("PlexServerHost", value); }
+        }
+
+        public virtual string PlexClientHosts
+        {
+            get { return GetValue("PlexClientHosts", "localhost:3000"); }
+            set { SetValue("PlexClientHosts", value); }
+        }
+
+        public virtual string PlexUsername
+        {
+            get { return GetValue("PlexUsername"); }
+            set { SetValue("PlexUsername", value); }
+        }
+
+        public virtual string PlexPassword
+        {
+            get { return GetValue("PlexPassword"); }
+            set { SetValue("PlexPassword", value); }
         }
 
         private string GetValue(string key)

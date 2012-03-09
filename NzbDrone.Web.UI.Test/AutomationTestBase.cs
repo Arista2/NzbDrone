@@ -11,12 +11,16 @@ using OpenQA.Selenium.Remote;
 
 namespace NzbDrone.Web.UI.Automation
 {
+    [Explicit]
+    [TestFixture(Category = "Automation")]
     public abstract class AutomationTestBase
     {
-        static readonly EnviromentProvider enviromentProvider = new EnviromentProvider();
-        private static readonly string testFolder;
+        private static readonly EnvironmentProvider environmentProvider = new EnvironmentProvider();
 
-        public string AppUrl
+        private readonly string _clonePackagePath;
+        private readonly string _masterPackagePath;
+
+        protected string AppUrl
         {
             get
             {
@@ -24,26 +28,28 @@ namespace NzbDrone.Web.UI.Automation
             }
         }
 
-
-        public RemoteWebDriver Driver { get; private set; }
-
-        static AutomationTestBase()
+        protected AutomationTestBase()
         {
-            CleanBinFolder();
-            testFolder = CreatePackage();
-            StartNzbDrone();
+            var rawPackagePath = Path.Combine(environmentProvider.ApplicationPath, "_rawPackage");
+            _clonePackagePath = Path.Combine(rawPackagePath, "NzbDrone_Automation");
+            _masterPackagePath = Path.Combine(rawPackagePath, "NzbDrone");
         }
+
+
+        protected RemoteWebDriver Driver { get; private set; }
+
+
 
         [SetUp]
         public void AutomationSetup()
         {
-            
+
         }
 
         [TearDown]
         public void AutomationTearDown()
         {
-            
+
 
             if (!Directory.Exists(Directory.GetCurrentDirectory() + "\\Screenshots"))
             {
@@ -62,18 +68,26 @@ namespace NzbDrone.Web.UI.Automation
         public void AutomationTestFixtureSetup()
         {
             StopNzbDrone();
-            ResetUserData();
-            StartNzbDrone();
+
+
+            DeleteClone();
+            ClonePackage();
+
+            //StartNzbDrone();
+            InstallNzbDroneService();
+
+            new HttpProvider().DownloadString(AppUrl);
+
             Driver = new FirefoxDriver();
         }
+
+
 
         [TestFixtureTearDown]
         public void AutomationTestFixtureTearDown()
         {
             Driver.Close();
             StopNzbDrone();
-
-            File.Copy(Path.Combine(testFolder, "nzbdrone.log"), Path.Combine(Directory.GetCurrentDirectory(), "nzbdrone.log"), true);
         }
 
 
@@ -86,76 +100,104 @@ namespace NzbDrone.Web.UI.Automation
             ((ITakesScreenshot)Driver).GetScreenshot().SaveAsFile(fileName, ImageFormat.Png);
         }
 
-        private void ResetUserData()
-        {
-            var appDataPath = Path.Combine(testFolder, "NzbDrone.Web", "app_data");
 
-            if (Directory.Exists(appDataPath))
-                Directory.Delete(appDataPath, true);
+
+        private void StartNzbDrone()
+        {
+            StartProcess("nzbdrone.exe", false);
 
         }
 
-
-        private static void CleanBinFolder()
+        private void StopNzbDrone()
         {
-            var folderName = "Debug";
 
-            if (EnviromentProvider.IsDebug)
+            foreach (var process in Process.GetProcesses())
             {
-                folderName = "Release";
+                if (string.Equals(process.ProcessName, "NzbDrone", StringComparison.InvariantCultureIgnoreCase)
+                   || string.Equals(process.ProcessName, "IISExpress", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    process.Kill();
+                    process.WaitForExit();
+                }
             }
 
-            var dirs = Directory.GetDirectories(enviromentProvider.ApplicationPath, folderName, SearchOption.AllDirectories);
-
-
-            foreach (var dir in dirs)
+            try
             {
-                Directory.Delete(dir, true);
+                StartProcess("ServiceUninstall.exe", true);
+            }
+            catch { }
+
+            foreach (var process in Process.GetProcesses())
+            {
+                if (string.Equals(process.ProcessName, "NzbDrone", StringComparison.InvariantCultureIgnoreCase)
+                   || string.Equals(process.ProcessName, "IISExpress", StringComparison.InvariantCultureIgnoreCase)
+                   ||
+                   string.Equals(process.ProcessName, "ServiceUninstall", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    process.Kill();
+                    process.WaitForExit();
+                }
             }
 
         }
 
-        static void StartNzbDrone()
+        private void InstallNzbDroneService()
+        {
+            StartProcess("ServiceInstall.exe", true);
+        }
+
+        private void StartProcess(string fileName, bool waitForExit)
         {
 
             var startInfo = new ProcessStartInfo
             {
-                FileName = Path.Combine(testFolder, "nzbdrone.exe"),
+                FileName = Path.Combine(_clonePackagePath, fileName),
                 RedirectStandardOutput = true,
-                UseShellExecute = false
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
             };
 
             var nzbDroneProcess = new Process
-                                      {
-                                          StartInfo = startInfo
-                                      };
-            nzbDroneProcess.OutputDataReceived +=
-                    delegate(object o, DataReceivedEventArgs args)
-                    {
-                        Console.WriteLine(args.Data);
-                    };
+            {
+                StartInfo = startInfo
+            };
+
+            nzbDroneProcess.OutputDataReceived += (o, args) => Console.WriteLine(args.Data);
+            nzbDroneProcess.ErrorDataReceived += (o, args) => Console.WriteLine(args.Data);
 
             nzbDroneProcess.Start();
-        }
 
+            nzbDroneProcess.BeginErrorReadLine();
+            nzbDroneProcess.BeginOutputReadLine();
 
-
-        public static void StopNzbDrone()
-        {
-            foreach (var process in Process.GetProcessesByName("nzbdrone"))
+            if (waitForExit)
             {
-                process.Kill();
-                process.WaitForExit();
+                nzbDroneProcess.WaitForExit();
             }
         }
 
-        private static string CreatePackage()
+
+        private void ClonePackage()
+        {
+            new DiskProvider().CopyDirectory(_masterPackagePath, _clonePackagePath);
+        }
+
+        private void DeleteClone()
+        {
+            if (Directory.Exists(_clonePackagePath))
+            {
+                Directory.Delete(_clonePackagePath, true);
+            }
+        }
+
+        private string CreatePackage()
         {
             Console.WriteLine("Creating NzbDrone Package");
 
             StopNzbDrone();
 
-            var rootDirectory = new DirectoryInfo(enviromentProvider.ApplicationPath);
+            var rootDirectory = new DirectoryInfo(environmentProvider.ApplicationPath);
 
             if (rootDirectory.GetDirectories("_rawPackage").Any())
             {
@@ -170,7 +212,7 @@ namespace NzbDrone.Web.UI.Automation
 
             Process.Start(startInfo).WaitForExit();
 
-            var testFolder = Path.Combine(enviromentProvider.SystemTemp, "NzbDroneAutomation");
+            var testFolder = Path.Combine(environmentProvider.SystemTemp, "NzbDroneAutomation");
 
             if (Directory.Exists(testFolder))
             {
@@ -182,6 +224,33 @@ namespace NzbDrone.Web.UI.Automation
 
 
             return testFolder;
+        }
+
+        private void ResetUserData()
+        {
+            var appDataPath = Path.Combine(_clonePackagePath, "NzbDrone.Web", "app_data");
+
+            if (Directory.Exists(appDataPath))
+                Directory.Delete(appDataPath, true);
+        }
+
+
+        private static void CleanBinFolder()
+        {
+            var folderName = "Debug";
+
+            if (EnvironmentProvider.IsDebug)
+            {
+                folderName = "Release";
+            }
+
+            var dirs = Directory.GetDirectories(environmentProvider.ApplicationPath, folderName, SearchOption.AllDirectories);
+
+
+            foreach (var dir in dirs)
+            {
+                Directory.Delete(dir, true);
+            }
         }
     }
 }

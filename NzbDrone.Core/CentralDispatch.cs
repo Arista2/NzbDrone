@@ -6,7 +6,6 @@ using DeskMetrics;
 using Ninject;
 using NLog;
 using NzbDrone.Common;
-using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Instrumentation;
 using NzbDrone.Core.Jobs;
 using NzbDrone.Core.Providers;
@@ -14,22 +13,30 @@ using NzbDrone.Core.Providers.Core;
 using NzbDrone.Core.Providers.ExternalNotification;
 using NzbDrone.Core.Providers.Indexer;
 using PetaPoco;
+using SignalR;
+using SignalR.Hosting.AspNet;
+using SignalR.Infrastructure;
+using SignalR.Ninject;
+using Connection = NzbDrone.Core.Datastore.Connection;
 
 namespace NzbDrone.Core
 {
     public class CentralDispatch
     {
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private readonly EnviromentProvider _enviromentProvider;
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        private readonly EnvironmentProvider _environmentProvider;
 
         public StandardKernel Kernel { get; private set; }
 
         public CentralDispatch()
         {
-            _enviromentProvider = new EnviromentProvider();
+            _environmentProvider = new EnvironmentProvider();
 
-            Logger.Debug("Initializing Kernel:");
+            logger.Debug("Initializing Kernel:");
             Kernel = new StandardKernel();
+
+            var resolver = new NinjectDependencyResolver(Kernel);
+            AspNetHost.SetResolver(resolver);
 
             InitDatabase();
             InitReporting();
@@ -43,9 +50,9 @@ namespace NzbDrone.Core
 
         private void InitDatabase()
         {
-            Logger.Info("Initializing Database...");
+            logger.Info("Initializing Database...");
 
-            var appDataPath = _enviromentProvider.GetAppDataPath();
+            var appDataPath = _environmentProvider.GetAppDataPath();
             if (!Directory.Exists(appDataPath)) Directory.CreateDirectory(appDataPath);
 
             var connection = Kernel.Get<Connection>();
@@ -60,29 +67,30 @@ namespace NzbDrone.Core
 
         private void InitReporting()
         {
-            EnviromentProvider.UGuid = Kernel.Get<ConfigProvider>().UGuid;
+            EnvironmentProvider.UGuid = Kernel.Get<ConfigProvider>().UGuid;
             ReportingService.RestProvider = Kernel.Get<RestProvider>();
 
             var appId = AnalyticsProvider.DESKMETRICS_TEST_ID;
-            
-            if (EnviromentProvider.IsProduction)
+
+            if (EnvironmentProvider.IsProduction)
                 appId = AnalyticsProvider.DESKMETRICS_PRODUCTION_ID;
 
-            var deskMetricsClient = new DeskMetricsClient(Kernel.Get<ConfigProvider>().UGuid.ToString(), appId, _enviromentProvider.Version);
+            var deskMetricsClient = new DeskMetricsClient(Kernel.Get<ConfigProvider>().UGuid.ToString(), appId, _environmentProvider.Version);
             Kernel.Bind<IDeskMetricsClient>().ToConstant(deskMetricsClient);
+
             Kernel.Get<AnalyticsProvider>().Checkpoint();
         }
 
         private void InitQuality()
         {
-            Logger.Info("Initializing Quality...");
+            logger.Debug("Initializing Quality...");
             Kernel.Get<QualityProvider>().SetupDefaultProfiles();
             Kernel.Get<QualityTypeProvider>().SetupDefault();
         }
 
         private void InitIndexers()
         {
-            Logger.Info("Initializing Indexers...");
+            logger.Debug("Initializing Indexers...");
             Kernel.Bind<IndexerBase>().To<NzbsOrg>();
             Kernel.Bind<IndexerBase>().To<NzbMatrix>();
             Kernel.Bind<IndexerBase>().To<NzbsRUs>();
@@ -95,7 +103,7 @@ namespace NzbDrone.Core
 
         private void InitJobs()
         {
-            Logger.Info("Initializing Background Jobs...");
+            logger.Debug("Initializing Background Jobs...");
 
             Kernel.Bind<JobProvider>().ToSelf().InSingletonScope();
 
@@ -105,7 +113,6 @@ namespace NzbDrone.Core
             Kernel.Bind<IJob>().To<DiskScanJob>().InSingletonScope();
             Kernel.Bind<IJob>().To<DeleteSeriesJob>().InSingletonScope();
             Kernel.Bind<IJob>().To<EpisodeSearchJob>().InSingletonScope();
-            Kernel.Bind<IJob>().To<RenameEpisodeJob>().InSingletonScope();
             Kernel.Bind<IJob>().To<PostDownloadScanJob>().InSingletonScope();
             Kernel.Bind<IJob>().To<UpdateSceneMappingsJob>().InSingletonScope();
             Kernel.Bind<IJob>().To<SeasonSearchJob>().InSingletonScope();
@@ -126,12 +133,13 @@ namespace NzbDrone.Core
 
         private void InitExternalNotifications()
         {
-            Logger.Info("Initializing External Notifications...");
+            logger.Debug("Initializing External Notifications...");
             Kernel.Bind<ExternalNotificationBase>().To<Xbmc>();
             Kernel.Bind<ExternalNotificationBase>().To<Smtp>();
             Kernel.Bind<ExternalNotificationBase>().To<Twitter>();
             Kernel.Bind<ExternalNotificationBase>().To<Providers.ExternalNotification.Growl>();
             Kernel.Bind<ExternalNotificationBase>().To<Prowl>();
+            Kernel.Bind<ExternalNotificationBase>().To<Plex>();
 
             var notifiers = Kernel.GetAll<ExternalNotificationBase>();
             Kernel.Get<ExternalNotificationProvider>().InitializeNotifiers(notifiers.ToList());
@@ -141,30 +149,30 @@ namespace NzbDrone.Core
         {
             try
             {
-                var pid = _enviromentProvider.NzbDroneProcessIdFromEnviroment;
+                var pid = _environmentProvider.NzbDroneProcessIdFromEnviroment;
 
-                Logger.Debug("Attaching to parent process ({0}) for automatic termination.", pid);
+                logger.Debug("Attaching to parent process ({0}) for automatic termination.", pid);
 
                 var hostProcess = Process.GetProcessById(Convert.ToInt32(pid));
 
                 hostProcess.EnableRaisingEvents = true;
                 hostProcess.Exited += (delegate
                                            {
-                                               Logger.Info("Host has been terminated. Shutting down web server.");
+                                               logger.Info("Host has been terminated. Shutting down web server.");
                                                ShutDown();
                                            });
 
-                Logger.Debug("Successfully Attached to host. Process [{0}]", hostProcess.ProcessName);
+                logger.Debug("Successfully Attached to host. Process [{0}]", hostProcess.ProcessName);
             }
             catch (Exception e)
             {
-                Logger.FatalException("An error has occurred while dedicating to host.", e);
+                logger.FatalException("An error has occurred while dedicating to host.", e);
             }
         }
 
         private static void ShutDown()
         {
-            Logger.Info("Shutting down application...");
+            logger.Info("Shutting down application...");
             WebTimer.Stop();
             Process.GetCurrentProcess().Kill();
         }

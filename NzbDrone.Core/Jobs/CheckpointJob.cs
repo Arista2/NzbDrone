@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Ninject;
+using NzbDrone.Common;
 using NzbDrone.Core.Model.Notification;
 using NzbDrone.Core.Providers;
 
@@ -18,7 +19,7 @@ namespace NzbDrone.Core.Jobs
 
         public CheckpointJob()
         {
-            
+
         }
 
         public string Name

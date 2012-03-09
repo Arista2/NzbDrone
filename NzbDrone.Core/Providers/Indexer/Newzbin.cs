@@ -7,6 +7,7 @@ using Ninject;
 using NzbDrone.Common;
 using NzbDrone.Core.Model;
 using NzbDrone.Core.Providers.Core;
+using NzbDrone.Core.Repository.Quality;
 
 namespace NzbDrone.Core.Providers.Indexer
 {
@@ -21,7 +22,7 @@ namespace NzbDrone.Core.Providers.Indexer
         {
         }
 
-        private const string URL_PARAMS = "feed=rss&hauth=1&ps_rb_language=4096";
+        private const string URL_PARAMS = "feed=rss&hauth=1&ps_rb_language=4096&ps_rb_video_format=3082257";
 
         protected override string[] Urls
         {
@@ -105,17 +106,15 @@ namespace NzbDrone.Core.Providers.Indexer
             if (currentResult != null)
             {
                 var quality = Parser.ParseQuality(item.Summary.Text);
-
                 currentResult.Quality = quality;
 
                 var languageString = Regex.Match(item.Summary.Text, @"Language - \w*", RegexOptions.IgnoreCase).Value;
-
                 currentResult.Language = Parser.ParseLanguage(languageString);
 
                 var sizeString = Regex.Match(item.Summary.Text, @"\(Size: \d*\,?\d+\.\d{1,2}\w{2}\)", RegexOptions.IgnoreCase).Value;
-
                 currentResult.Size = Parser.GetReportSize(sizeString);
             }
+
             return currentResult;
         }
 

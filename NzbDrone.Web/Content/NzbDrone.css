@@ -50,60 +50,12 @@ hr
     display: none;
 }
 
-/* Menu */
-
-#menu
-{
-    height: 60px;
-}
-
-#menu ul
-{
-    margin: 0;
-    padding: 5px 0px 5px 0px;
-    list-style: none;
-    line-height: normal;
-}
-
-#menu li
-{
-    display: block;
-    float: left;
-    padding: 5px 15px 2px 10px;
-}
-
-#menu a
-{
-    display: block;
-    float: left;
-    height: 26px;
-    padding: 0px 5px 7px 5px;
-    text-decoration: none;
-    text-align: center;
-    text-transform: lowercase;
-    font-size: 21px;
-    font-weight: normal;
-    vertical-align: middle;
-    font-family: "Segoe UI" , "Open Sans" , "Segoe UI Light" , sans-serif;
-}
-
-#menu a:hover
-{
-    text-decoration: none;
-}
-
-#menu li.current_page_item a
-{
-    border-bottom: 2px solid;
-    border-color: #065EFE;
-}
-
 /* Page */
 
 #page
 {
     background-color: White;
-    padding: 10px 20px 20px 20px;
+    padding: 10px 20px 100px 20px;
     min-height: 300px;
 }
 
@@ -116,13 +68,14 @@ hr
     font-family: "Segoe UI Light" , "Open Sans" , "Segoe UI" , sans-serif;
     font-weight: 100;
     height: 135px;
-    background: url(images/header.jpg) no-repeat left top;
-    font-size: 90px;
-    color: #FFFFFF;
+    background: url(images/logo.png) no-repeat left top;
+    background-color: #065EFE;
+    font-size: 110px;
+    color: white; /**color: rgb(40, 40, 40);**/
     text-transform: lowercase;
     letter-spacing: -1px;
-    line-height: normal;
-    padding-left: 120px;
+    line-height: 110px;
+    padding-left: 140px;
 }
 
 .stackframe
@@ -257,7 +210,7 @@ button span, input[type="button"] span, input[type="submit"] span, input[type="r
     margin-top: 7px;
     margin-bottom: 0px;
     border: 0px;
-    background: rgb(40, 40, 40);
+    background: rgb(75, 75, 75);
     color: rgb(169, 169, 169);
     padding: 4px;
 }
@@ -276,4 +229,17 @@ button span, input[type="button"] span, input[type="submit"] span, input[type="r
     border: 1px solid #FFFFFF;
     color: #FFFFFF;
     font-weight: normal;
+}
+
+#footer a
+{
+    font-family: "Segoe UI" , "Open Sans" , "Segoe UI" , sans-serif;
+    font-size: 16px;
+    text-decoration: none;
+    font-weight: lighter;
+}
+
+#footer a:hover
+{
+    text-decoration: underline;
 }

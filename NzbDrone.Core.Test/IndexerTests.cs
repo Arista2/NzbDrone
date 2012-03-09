@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.ServiceModel.Syndication;
 
@@ -29,6 +30,7 @@ namespace NzbDrone.Core.Test
         [TestCase("nzbsrus.xml")]
         [TestCase("newzbin.xml")]
         [TestCase("nzbmatrix.xml")]
+        [TestCase("newznab.xml")]
         public void parse_feed_xml(string fileName)
         {
             Mocker.GetMock<HttpProvider>()
@@ -53,6 +55,7 @@ namespace NzbDrone.Core.Test
             parseResults.Should().NotBeEmpty();
             parseResults.Should().OnlyContain(s => s.Indexer == mockIndexer.Name);
             parseResults.Should().OnlyContain(s => !String.IsNullOrEmpty(s.OriginalString));
+            parseResults.Should().OnlyContain(s => s.Age >= 0);
         }
 
         private void WithConfiguredIndexers()
@@ -236,20 +239,22 @@ namespace NzbDrone.Core.Test
             result.Should().NotBeEmpty();
         }
 
-        [Test]
-        public void nzbmatrix_search_returns_valid_results()
+        [TestCase("simpsons", 21, 23)]
+        [TestCase("The walking dead", 2, 10)]
+        public void nzbmatrix_search_returns_valid_results(string title, int season, int episode)
         {
             WithConfiguredIndexers();
 
 
             Mocker.Resolve<HttpProvider>();
 
-            var result = Mocker.Resolve<NzbMatrix>().FetchEpisode("Simpsons", 21, 23);
+            var result = Mocker.Resolve<NzbMatrix>().FetchEpisode(title, season, episode);
 
             Mark500Inconclusive();
 
             result.Should().NotBeEmpty();
         }
+
 
 
         [Test]
@@ -274,7 +279,7 @@ namespace NzbDrone.Core.Test
         public void get_query_title(string raw, string clean)
         {
             var mock = new Mock<IndexerBase>();
-            mock.CallBase = true;           
+            mock.CallBase = true;
             var result = mock.Object.GetQueryTitle(raw);
             result.Should().Be(clean);
         }
@@ -353,6 +358,28 @@ namespace NzbDrone.Core.Test
             parseResults[0].Size.Should().Be(1793148846);
         }
 
+        [Test]
+        public void size_newznab()
+        {
+            WithConfiguredIndexers();
+
+            var newznabDefs = Builder<NewznabDefinition>.CreateListOfSize(1)
+                    .All()
+                    .With(n => n.ApiKey = String.Empty)
+                    .Build();
+
+            Mocker.GetMock<NewznabProvider>().Setup(s => s.Enabled()).Returns(newznabDefs.ToList());
+
+            Mocker.GetMock<HttpProvider>()
+                          .Setup(h => h.DownloadStream(It.IsAny<String>(), It.IsAny<NetworkCredential>()))
+                          .Returns(File.OpenRead(".\\Files\\Rss\\SizeParsing\\newznab.xml"));
+
+            //Act
+            var parseResults = Mocker.Resolve<Newznab>().FetchRss();
+
+            parseResults.Should().HaveCount(1);
+            parseResults[0].Size.Should().Be(1183105773);
+        }
 
         [Test]
         public void Server_Unavailable_503_should_not_log_exception()
@@ -386,11 +413,49 @@ namespace NzbDrone.Core.Test
         public void indexer_that_isnt_configured_shouldnt_make_an_http_call()
         {
             Mocker.Resolve<NotConfiguredIndexer>().FetchRss();
- 
+
             Mocker.GetMock<HttpProvider>()
                 .Verify(c => c.DownloadFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never());
 
             ExceptionVerification.ExpectedWarns(1);
+        }
+
+        [Test]
+        public void newznab_link_should_be_link_to_nzb_not_details()
+        {
+            Mocker.GetMock<HttpProvider>()
+                          .Setup(h => h.DownloadStream(It.IsAny<String>(), It.IsAny<NetworkCredential>()))
+                          .Returns(File.OpenRead(".\\Files\\Rss\\newznab.xml"));
+
+            var fakeSettings = Builder<IndexerDefinition>.CreateNew().Build();
+            Mocker.GetMock<IndexerProvider>()
+                .Setup(c => c.GetSettings(It.IsAny<Type>()))
+                .Returns(fakeSettings);
+
+            var mockIndexer = Mocker.Resolve<MockIndexer>();
+            var parseResults = mockIndexer.FetchRss();
+
+            parseResults.Should().NotBeEmpty();
+            parseResults.Should().OnlyContain(s => s.NzbUrl.Contains("getnzb"));
+            parseResults.Should().NotContain(s => s.NzbUrl.Contains("details"));
+        }
+
+        [Test]
+        public void nzbmatrix_should_use_age_from_custom()
+        {
+            WithConfiguredIndexers();
+
+            var expectedAge = DateTime.Now.Subtract(new DateTime(2011, 4, 25, 15, 6, 58)).Days;
+
+            Mocker.GetMock<HttpProvider>()
+                          .Setup(h => h.DownloadStream(It.IsAny<String>(), It.IsAny<NetworkCredential>()))
+                          .Returns(File.OpenRead(".\\Files\\Rss\\SizeParsing\\nzbmatrix.xml"));
+
+            //Act
+            var parseResults = Mocker.Resolve<NzbMatrix>().FetchRss();
+
+            parseResults.Should().HaveCount(1);
+            parseResults[0].Age.Should().Be(expectedAge);
         }
 
         private static void Mark500Inconclusive()
@@ -398,6 +463,7 @@ namespace NzbDrone.Core.Test
             ExceptionVerification.MarkInconclusive(typeof(WebException));
             ExceptionVerification.MarkInconclusive("System.Net.WebException");
             ExceptionVerification.MarkInconclusive("(503) Server Unavailable.");
+            ExceptionVerification.MarkInconclusive("(500) Internal Server Error.");
         }
     }
 }

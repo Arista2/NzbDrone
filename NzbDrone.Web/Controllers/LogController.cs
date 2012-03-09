@@ -13,13 +13,13 @@ namespace NzbDrone.Web.Controllers
     public class LogController : Controller
     {
         private readonly LogProvider _logProvider;
-        private readonly EnviromentProvider _enviromentProvider;
+        private readonly EnvironmentProvider _environmentProvider;
         private readonly DiskProvider _diskProvider;
 
-        public LogController(LogProvider logProvider, EnviromentProvider enviromentProvider, DiskProvider diskProvider)
+        public LogController(LogProvider logProvider, EnvironmentProvider environmentProvider, DiskProvider diskProvider)
         {
             _logProvider = logProvider;
-            _enviromentProvider = enviromentProvider;
+            _environmentProvider = environmentProvider;
             _diskProvider = diskProvider;
         }
 
@@ -32,12 +32,12 @@ namespace NzbDrone.Web.Controllers
         {
             string log = string.Empty;
 
-            if (_diskProvider.FileExists(_enviromentProvider.GetArchivedLogFileName()))
+            if (_diskProvider.FileExists(_environmentProvider.GetArchivedLogFileName()))
             {
-                 log = _diskProvider.ReadAllText(_enviromentProvider.GetArchivedLogFileName());
+                 log = _diskProvider.ReadAllText(_environmentProvider.GetArchivedLogFileName());
             } 
            
-            log += _diskProvider.ReadAllText(_enviromentProvider.GetLogFileName());
+            log += _diskProvider.ReadAllText(_environmentProvider.GetLogFileName());
 
             return new FileContentResult(Encoding.ASCII.GetBytes(log), "text/plain");
         }
@@ -64,11 +64,16 @@ namespace NzbDrone.Web.Controllers
 
             int filteredCount = q.Count();
 
-            int sortCol = dataTablesParams.iSortCol.First();
-            var sortColName = sortCol == 0 ? "Time" : sortCol == 1 ? "Level" : "Logger";
-            var sortExpression = String.Format("{0} {1}", sortColName, dataTablesParams.sSortDir.First());
+            IQueryable<Log> sorted = q;
 
-            var sorted = q.OrderBy(sortExpression);
+            for (int i = 0; i < dataTablesParams.iSortingCols; i++)
+            {
+                int sortCol = dataTablesParams.iSortCol[i];
+                var sortColName = sortCol == 0 ? "Time" : sortCol == 1 ? "Level" : "Logger";
+                var sortExpression = String.Format("{0} {1}", sortColName, dataTablesParams.sSortDir[i]);
+
+                sorted = sorted.OrderBy(sortExpression);
+            }
 
             IQueryable<Log> filteredAndSorted = sorted;
             if (filteredCount > dataTablesParams.iDisplayLength)

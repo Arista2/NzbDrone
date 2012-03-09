@@ -1,0 +1,193 @@
+@using NzbDrone.Web.Helpers
+@model IEnumerable<NzbDrone.Core.Repository.Series>
+@{ViewBag.Title = "Series Editor";}
+
+@section HeaderContent
+{
+    @Html.IncludeCss("Settings.css")
+    
+    <style>
+        .checkboxColumn {
+            width: 95px;
+            text-align: center;
+        }
+        
+        .masterControls {
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .buttons {
+            width: 600px;
+            text-align: center;
+        }
+        
+        table input[type="text"], table select {
+            margin: 2px 2px;
+        }
+        
+        td .path {
+            width: 300px;
+        }
+        
+        td .backlogSetting {
+            width: 90px;
+        }
+        
+        td .quality {
+            width: 120px;
+        }
+        
+        #stylized, .settingsForm {
+            overflow: hidden;
+        }
+        
+        #stylized {
+            float: left;
+        }
+        
+        #changesOverview {
+            margin-top: 15px;
+            float: left;
+            font-size: 20px;
+        }
+    </style>
+}
+
+@using (Html.BeginForm("SaveEditor", "Series", FormMethod.Post, new { id = "SeriesEditor", name = "SeriesEditor" }))
+{
+    <table id ="seriesEditorGrid" class="dataTable dataTablesGrid no-details">
+        <thead>
+            <th width="14px">@Html.CheckBox("editToggleMaster", false, new { @class = "editToggleMaster" })</th>
+            <th>Title</th>
+            <th width="125px;">Quality</th>
+            <th class="checkboxColumn">Monitored</th>
+            <th class="checkboxColumn">Season Folder</th>
+            <th width="100px">Backlog Status</th>
+            <th width="310px">Path</th>
+        </thead>
+        
+        <tbody>
+            @foreach (var series in Model)
+            {
+                Html.RenderPartial("EditorItem", series);
+            }
+        </tbody>
+    </table>
+    
+    <div class="masterControls">
+        <div id="stylized" style="border-color: transparent;">
+            <div class="settingsForm">
+                <label class="labelClass">Quality Profile
+                    <span class="small">Which Quality Profile should NzbDrone use to download episodes?</span>
+                </label>
+                @Html.DropDownList("masterQualitySelector", (SelectList)ViewData["MasterProfileSelectList"], new { @class = "inputClass masterSelector", disabled = true })
+                <label class="labelClass">Monitored
+                    <span class="small">Should NzbDrone download episodes for this series?</span>
+                </label>
+                @Html.DropDownList("masterMonitored", (SelectList)ViewData["BoolSelectList"], new { @class = "inputClass masterSelector", disabled = true })
+                <label class="labelClass">Use Season Folder
+                    <span class="small">Should downloaded episodes be stored in season folders?</span>
+                </label>
+                @Html.DropDownList("masterSeasonFolder", (SelectList)ViewData["BoolSelectList"], new { @class = "inputClass masterSelector", disabled = true })
+                <label class="labelClass">Backlog Status
+                    <span class="small">Should NzbDrone perform backlog searches for this series?</span>
+                </label>
+                @Html.DropDownList("masterBacklogSetting", (SelectList)ViewData["MasterBacklogSettingSelectList"], new { @class = "inputClass masterSelector", disabled = true })
+            </div>
+        </div>
+        <div id="changesOverview" style="border-color: transparent;">
+            <div id="editingCount"></div>
+        </div>
+    </div>
+
+    <div class="buttons">  
+        <button type="submit" class="save_button" disabled="disabled" title="Commit the settings from your series above to the database">
+            Save Changes</button>
+    </div>
+}
+
+@section Scripts
+{
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#seriesEditorGrid').removeClass('hidden-grid');
+
+            oTable = $('.dataTablesGrid').dataTable({
+                "bShowAll": false,
+                "bPaginate": false,
+                "bLengthChange": false,
+                "bFilter": false,
+                "bSort": false,
+                "bInfo": false,
+                "bAutoWidth": false
+            });
+        });
+
+        $(document).on('change', '.editToggleMaster', function () {
+            var toggle = $(this).prop('checked');
+            $('.editToggle').each(function () {
+                $(this).prop('checked', toggle);
+            });
+        });
+
+        $(document).on('change', '.editToggle, .editToggleMaster', function () {
+            var selectedCount = $('.editToggle:checked');
+
+            if (selectedCount.length > 0) {
+                $('.masterSelector').each(function () {
+                    $(this).attr("disabled", false);
+                });
+
+                $('#editingCount').text(selectedCount.length + ' series have been selected for editing');
+
+                if (selectedCount.length === 1) {
+                    $('#editingCount').text(selectedCount.length + ' series has been selected for editing');
+                }
+            }
+
+            else {
+                $('.masterSelector').each(function () {
+                    $(this).attr("disabled", true);
+                    $('#editingCount').text('');
+                });
+            }
+        });
+
+        $(document).on('change', '.masterSelector', function () {
+            //Find selected values
+            var profileId = $('#masterQualitySelector').val();
+            var monitored = $('#masterMonitored').val();
+            var seasonFolder = $('#masterSeasonFolder').val();
+            var backlogStatus = $('#masterBacklogSetting').val();
+
+            var selected = $('.editToggle:checked');
+
+            selected.each(function() {
+                if (profileId != -10) {
+                    $(this).parent('td').parent('.seriesEditRow').find('.quality').val(profileId);
+                }
+                
+                if (monitored != -10) {
+                    var monitoredBool = true;
+                    if (monitored != 1)
+                        monitoredBool = false;
+
+                    $(this).parent('td').parent('.seriesEditRow').find('.monitored').prop('checked', monitoredBool);
+                }
+
+                if (seasonFolder != -10) {
+                    var seasonFolderBool = true;
+                    if (seasonFolder != 1)
+                        seasonFolderBool = false;
+
+                    $(this).parent('td').parent('.seriesEditRow').find('.seasonFolder').prop('checked', seasonFolderBool);
+                }
+
+                if (backlogStatus != -10) {
+                    $(this).parent('td').parent('.seriesEditRow').find('.backlogSetting').val(backlogStatus);
+                }
+            });
+        });
+    </script>
+}

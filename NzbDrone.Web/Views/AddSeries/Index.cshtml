@@ -1,15 +1,53 @@
 ﻿@using NzbDrone.Web.Helpers
 @{ViewBag.Title = "Add Series";}
-@section Scripts
-{
-    @Html.IncludeScript("NzbDrone/addSeries.js")
 
-    <script type="text/javascript">
-        $(document).ready(function () {
-            $('#addSeriesAccordion').accordion("activate", false);
-        });
-    </script>
+@section HeaderContent
+{
+    <style>
+    .existingSeries
+    {
+        border-color: #f2f2f2;
+        border-width: 1px;
+        border-style: solid;
+        background-color: #f2f2f2;
+        margin: 0px 10px 10px 0px;
+        padding: 5px;
+        display: block;
+    }
+    .masterQualitySelector
+    {
+        left: 415px;
+        position: relative;
+    }
+    
+    .seriesPathValue
+    {
+        display: block;
+    }
+    
+    .existingSeriesContainer
+    {
+        position: relative;
+    }
+    
+    .ui-autocomplete.seriesLookupResults {
+        max-height: 180px;
+		overflow-y: auto;
+		/* prevent horizontal scrollbar */
+		overflow-x: hidden;
+    }
+    
+    .tvDbLink {
+        float: right;
+    }
+
+    .tvDbLink:hover {
+        cursor: pointer;
+        text-decoration: underline;
+    }
+</style>
 }
+
 @{Html.RenderAction("RootDir");}
 <div class="jquery-accordion" id="addSeriesAccordion">
     <h3>
@@ -23,3 +61,20 @@
         @{ Html.RenderAction("ExistingSeries", "AddSeries"); }
     </div>
 </div>
+
+@section Scripts
+{
+    @Html.IncludeScript("NzbDrone/addSeries.js")
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $('#addSeriesAccordion').accordion("activate", false);
+        });
+
+        $(document).on('click', '.tvDbLink', function (event) {
+            var url = $(this).attr('rel');
+            window.open(url, 'thetvdb');
+            event.preventDefault();
+        });
+    </script>
+}
