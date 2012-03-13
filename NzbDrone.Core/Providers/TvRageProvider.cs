@@ -70,7 +70,8 @@ namespace NzbDrone.Core.Providers
 
         public virtual TvRageSeries GetSeries(int id)
         {
-            var xmlStream = _httpProvider.DownloadStream("http://services.tvrage.com/feeds/showinfo.php?sid=" + id, null);
+            var url = string.Format("http://services.tvrage.com/feeds/showinfo.php?key={0}sid={1}", TVRAGE_APIKEY, id);
+            var xmlStream = _httpProvider.DownloadStream(url, null);
             var xml = XDocument.Load(xmlStream);
             var s = xml.Descendants("Showinfo").First();
             try
@@ -109,7 +110,8 @@ namespace NzbDrone.Core.Providers
 
         public virtual List<TvRageEpisode> GetEpisodes(int id)
         {
-            var xmlStream = _httpProvider.DownloadStream("http://services.tvrage.com/feeds/episode_list.php?sid=" + id, null);
+            var url = String.Format("http://services.tvrage.com/feeds/episode_list.php?key={0}sid={1}", TVRAGE_APIKEY, id);
+            var xmlStream = _httpProvider.DownloadStream(url, null);
             var xml = XDocument.Load(xmlStream);
             var show = xml.Descendants("Show");
             var seasons = show.Descendants("Season");
