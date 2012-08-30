@@ -9,6 +9,22 @@ namespace NzbDrone.Core.Repository
     [PrimaryKey("EpisodeFileId", autoIncrement = true)]
     public class EpisodeFile
     {
+        public EpisodeFile()
+        {
+            
+        }
+
+        public EpisodeFile(EpisodeFile source)
+        {
+            EpisodeFileId = source.EpisodeFileId;
+            SeriesId = source.SeriesId;
+            SeasonNumber = source.SeasonNumber;
+            Path = source.Path;
+            Quality = source.Quality;
+            Proper = source.Proper;
+            Size = source.Size;
+        }
+
         public int EpisodeFileId { get; set; }
 
         public int SeriesId { get; set; }
@@ -18,6 +34,8 @@ namespace NzbDrone.Core.Repository
         public bool Proper { get; set; }
         public long Size { get; set; }
         public DateTime DateAdded { get; set; }
+        public string SceneName { get; set; }
+        public string ReleaseGroup { get; set; }
 
         [Ignore]
         public Model.Quality QualityWrapper

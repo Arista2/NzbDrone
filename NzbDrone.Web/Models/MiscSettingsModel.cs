@@ -13,7 +13,12 @@ namespace NzbDrone.Web.Models
         public bool EnableBacklogSearching { get; set; }
 
         [DisplayName("Automatically Ignore Deleted Episodes")]
-        [Description("Should NzbDrone automatically ignore episodes that were deleted from disk?")]
+        [Description("Deleted episodes are automatically ignored.")]
         public bool AutoIgnorePreviouslyDownloadedEpisodes { get; set; }
+
+        [DisplayName("Specified Release Groups")]
+        [Description("Comma separated list of release groups to download episodes (leave empty for all groups)")]
+        [DisplayFormat(ConvertEmptyStringToNull = false)]
+        public string AllowedReleaseGroups { get; set; }
     }
 }

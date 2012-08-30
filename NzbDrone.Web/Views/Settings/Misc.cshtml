@@ -3,7 +3,7 @@
 @{ Layout = null; }
 
 <div class="warningBox">
-    Enabling Backlog Searching can use lots of bandwidth and is not recommended for Users with block Usenet accounts or bandwidth restrictions.
+    Enabling Backlog Searching can use lots of bandwidth and is not recommended for users with block Usenet accounts or bandwidth restrictions.
 </div>
 
 <div id="stylized">
@@ -18,6 +18,11 @@
             <span class="small">@Html.DescriptionFor(m => m.AutoIgnorePreviouslyDownloadedEpisodes)</span>
         </label>
         @Html.CheckBoxFor(m => m.AutoIgnorePreviouslyDownloadedEpisodes, new { @class = "inputClass checkClass" })
+
+        <label class="labelClass">@Html.LabelFor(m => m.AllowedReleaseGroups)
+            <span class="small">@Html.DescriptionFor(m => m.AllowedReleaseGroups)</span>
+        </label>
+        @Html.TextBoxFor(m => m.AllowedReleaseGroups, new { @class = "inputClass" })
 
         <div style="overflow: hidden; height: 50px;">
         </div>

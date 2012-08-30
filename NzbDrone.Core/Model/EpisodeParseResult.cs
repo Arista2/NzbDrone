@@ -30,6 +30,8 @@ namespace NzbDrone.Core.Model
 
         public string NzbUrl { get; set; }
 
+        public string NzbInfoUrl { get; set; }
+
         public string OriginalString { get; set; }
 
         public Series Series { get; set; }
@@ -41,6 +43,8 @@ namespace NzbDrone.Core.Model
         public long Size { get; set; }
 
         public int Age { get; set; }
+
+        public string ReleaseGroup { get; set; }
 
         public override string ToString()
         {

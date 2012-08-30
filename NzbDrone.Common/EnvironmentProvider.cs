@@ -49,9 +49,6 @@ namespace NzbDrone.Common
 
         public static Guid UGuid { get; set; }
 
-
-        public static bool RegisterNewInstall { get; set; }
-
         public virtual bool IsUserInteractive
         {
             get { return Environment.UserInteractive; }
@@ -72,7 +69,7 @@ namespace NzbDrone.Common
                 if (!string.IsNullOrWhiteSpace(applicationPath))
                     return applicationPath;
 
-                applicationPath = CrawlToRoot(StartUpPath);
+                applicationPath = CrawlToRoot(AppDomain.CurrentDomain.BaseDirectory);
                 if (!string.IsNullOrWhiteSpace(applicationPath))
                     return applicationPath;
 
@@ -80,7 +77,7 @@ namespace NzbDrone.Common
                 if (!string.IsNullOrWhiteSpace(applicationPath))
                     return applicationPath;
 
-                throw new ApplicationException("Can't fine IISExpress folder.");
+                throw new ApplicationException("Can't finds IISExpress folder.");
             }
         }
 
@@ -101,7 +98,6 @@ namespace NzbDrone.Common
         {
             return dir.GetDirectories(ROOT_MARKER).Length != 0;
         }
-
 
         public virtual string StartUpPath
         {

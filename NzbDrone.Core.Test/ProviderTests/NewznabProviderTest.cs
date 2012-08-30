@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FizzWare.NBuilder;
 using FluentAssertions;
@@ -8,6 +9,7 @@ using NzbDrone.Core.Providers;
 using NzbDrone.Core.Repository;
 using NzbDrone.Core.Repository.Quality;
 using NzbDrone.Core.Test.Framework;
+using NzbDrone.Test.Common;
 using NzbDrone.Test.Common.AutoMoq;
 
 namespace NzbDrone.Core.Test.ProviderTests
@@ -216,6 +218,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             //Assert
             var result = db.Fetch<NewznabDefinition>();
             result.Should().HaveCount(5);
+            result.Should().OnlyContain(i => i.BuiltIn);
         }
 
         [Test]
@@ -236,16 +239,76 @@ namespace NzbDrone.Core.Test.ProviderTests
             Mocker.SetConstant(db);
 
             db.Insert(definitions[0]);
-            db.Insert(definitions[1]);
+            db.Insert(definitions[2]);
 
             //Act
             Mocker.Resolve<NewznabProvider>().InitializeNewznabIndexers(definitions);
 
             //Assert
             var result = db.Fetch<NewznabDefinition>();
-            result.Should().HaveCount(5);
-            result.Where(d => d.Url == "http://www.nzbdrone.com").Should().HaveCount(3);
-            result.Where(d => d.Url == "http://www.nzbdrone2.com").Should().HaveCount(2);
+            result.Should().HaveCount(2);
+            result.Where(d => d.Url == "http://www.nzbdrone.com").Should().HaveCount(1);
+            result.Where(d => d.Url == "http://www.nzbdrone2.com").Should().HaveCount(1);
+        }
+
+        [Test]
+        public void InitializeNewznabIndexers_should_update_matching_indexer_to_be_builtin()
+        {
+            //Setup
+            var definition = Builder<NewznabDefinition>.CreateNew()
+                .With(d => d.Url = "http://www.nzbdrone2.com")
+                .With(d => d.BuiltIn = false)
+                .Build();
+
+            var db = TestDbHelper.GetEmptyDatabase();
+            Mocker.SetConstant(db);
+
+            db.Insert(definition);
+
+            //Act
+            Mocker.Resolve<NewznabProvider>().InitializeNewznabIndexers(new List<NewznabDefinition>{ definition });
+
+            //Assert
+            var result = db.Fetch<NewznabDefinition>();
+            result.Should().HaveCount(1);
+            result.First().BuiltIn.Should().BeTrue();
+        }
+
+        [Test]
+        public void InitializeNewznabIndexers_should_not_blow_up_if_more_than_one_indexer_with_the_same_url_is_found()
+        {
+            //Setup
+            var definition = Builder<NewznabDefinition>.CreateNew()
+                .With(d => d.Url = "http://www.nzbdrone2.com")
+                .With(d => d.BuiltIn = false)
+                .Build();
+
+            var db = TestDbHelper.GetEmptyDatabase();
+            Mocker.SetConstant(db);
+
+            db.Insert(definition);
+            db.Insert(definition);
+
+            //Act
+            Mocker.Resolve<NewznabProvider>().InitializeNewznabIndexers(new List<NewznabDefinition> { definition });
+
+            //Assert
+            var result = db.Fetch<NewznabDefinition>();
+            result.Should().HaveCount(2);
+        }
+
+        [Test]
+        public void CheckHostname_should_do_nothing_if_hostname_is_valid()
+        {
+            Mocker.Resolve<NewznabProvider>().CheckHostname("http://www.google.com");
+        }
+
+        [Test]
+        [ExpectedException("System.Net.Sockets.SocketException")]  
+        public void CheckHostname_should_log_error_and_throw_exception_if_dnsHostname_is_invalid()
+        {
+            Mocker.Resolve<NewznabProvider>().CheckHostname("http://BadName");
+            ExceptionVerification.ExpectedErrors(1);
         }
     }
 }

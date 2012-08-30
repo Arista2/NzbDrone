@@ -8,6 +8,7 @@ using NzbDrone.Core;
 using NzbDrone.Core.Helpers;
 using NzbDrone.Core.Providers;
 using NzbDrone.Web.Models;
+using ServiceStack.Text;
 
 namespace NzbDrone.Web.Controllers
 {
@@ -37,9 +38,8 @@ namespace NzbDrone.Web.Controllers
                 AirDateString = e.AirDate.Value.ToBestDateString()
             });
 
-            var serialized = new JavaScriptSerializer().Serialize(missing);
-
-            return View((object)serialized);
+            JsConfig.IncludeNullValues = true;
+            return View(missing);
         }
     }
 }

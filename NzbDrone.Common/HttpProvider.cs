@@ -5,12 +5,24 @@ using System.IO;
 using System.Net;
 using System.Text;
 using NLog;
+using Ninject;
 
 namespace NzbDrone.Common
 {
     public class HttpProvider
     {
+        private readonly EnvironmentProvider _environmentProvider;
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+        [Inject]
+        public HttpProvider(EnvironmentProvider environmentProvider)
+        {
+            _environmentProvider = environmentProvider;
+        }
+
+        public HttpProvider()
+        {
+        }
 
         public virtual string DownloadString(string address)
         {
@@ -31,14 +43,15 @@ namespace NzbDrone.Common
             }
             catch (Exception ex)
             {
-                logger.TraceException(ex.Message, ex);
+                logger.Trace(ex.Message, ex.ToString());
                 throw;
             }
         }
 
         public virtual Stream DownloadStream(string url, NetworkCredential credential)
         {
-            var request = WebRequest.Create(url);
+            var request = (HttpWebRequest)WebRequest.Create(url);
+            request.UserAgent = String.Format("NzbDrone {0}", _environmentProvider.Version);
 
             request.Credentials = credential;
             var response = request.GetResponse();

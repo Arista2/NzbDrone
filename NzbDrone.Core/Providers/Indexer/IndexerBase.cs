@@ -45,9 +45,15 @@ namespace NzbDrone.Core.Providers.Indexer
         /// </summary>
         protected abstract string[] Urls { get; }
 
-
         public abstract bool IsConfigured { get; }
 
+        /// <summary>
+        ///   Should the indexer be enabled by default?
+        /// </summary>
+        public virtual bool EnabledByDefault
+        {
+            get { return false; }
+        }
 
         /// <summary>
         /// Gets the credential.
@@ -56,7 +62,6 @@ namespace NzbDrone.Core.Providers.Indexer
         {
             get { return null; }
         }
-
 
         protected abstract IList<String> GetEpisodeSearchUrls(string seriesTitle, int seasonNumber, int episodeNumber);
         protected abstract IList<String> GetDailyEpisodeSearchUrls(string seriesTitle, DateTime date);
@@ -75,11 +80,28 @@ namespace NzbDrone.Core.Providers.Indexer
         }
 
         /// <summary>
+        /// This method can be overwritten to provide pre-parse the title
+        /// </summary>
+        /// <param name="item">RSS item that needs to be parsed</param>
+        /// <returns></returns>
+        protected virtual string TitlePreParser(SyndicationItem item)
+        {
+            return item.Title.Text;
+        }
+
+        /// <summary>
         ///   Generates direct link to download an NZB
         /// </summary>
         /// <param name = "item">RSS Feed item to generate the link for</param>
         /// <returns>Download link URL</returns>
         protected abstract string NzbDownloadUrl(SyndicationItem item);
+
+        /// <summary>
+        ///   Generates link to the NZB info at the indexer
+        /// </summary>
+        /// <param name = "item">RSS Feed item to generate the link for</param>
+        /// <returns>Nzb Info URL</returns>
+        protected abstract string NzbInfoUrl(SyndicationItem item);
 
         /// <summary>
         ///   Fetches RSS feed and process each news item.
@@ -175,8 +197,8 @@ namespace NzbDrone.Core.Providers.Indexer
                             if (parsedEpisode != null)
                             {
                                 parsedEpisode.NzbUrl = NzbDownloadUrl(item);
-                                parsedEpisode.Indexer = Name;
-                                parsedEpisode.OriginalString = item.Title.Text;
+                                parsedEpisode.NzbInfoUrl = NzbInfoUrl(item);
+                                parsedEpisode.Indexer = String.IsNullOrWhiteSpace(parsedEpisode.Indexer) ? Name : parsedEpisode.Indexer;
                                 result.Add(parsedEpisode);
                             }
                         }
@@ -218,8 +240,16 @@ namespace NzbDrone.Core.Providers.Indexer
         /// <returns>Detailed episode info</returns>
         public EpisodeParseResult ParseFeed(SyndicationItem item)
         {
-            var episodeParseResult = Parser.ParseTitle(item.Title.Text);
-            if (episodeParseResult != null) episodeParseResult.Age = DateTime.Now.Date.Subtract(item.PublishDate.Date).Days;
+            var title = TitlePreParser(item);
+
+            var episodeParseResult = Parser.ParseTitle(title);
+            if (episodeParseResult != null)
+            {
+                episodeParseResult.Age = DateTime.Now.Date.Subtract(item.PublishDate.Date).Days;
+                episodeParseResult.OriginalString = title;
+            }
+
+            _logger.Trace("Parsed: {0} from: {1}", episodeParseResult, item.Title.Text);
 
             return CustomParser(item, episodeParseResult);
         }

@@ -18,7 +18,7 @@ namespace NzbDrone.Core
         private static readonly Regex[] ReportTitleRegex = new[]
                                 {
                                     //Episodes with airdate
-                                    new Regex(@"^(?<title>.+?)?\W*(?<airyear>\d{4})\W+(?<airmonth>\d{2})\W+(?<airday>\d{2})\W?(?!\\)",
+                                    new Regex(@"^(?<title>.+?)?\W*(?<airyear>\d{4})\W+(?<airmonth>[0-1][0-9])\W+(?<airday>[0-3][0-9])\W?(?!\\)",
                                         RegexOptions.IgnoreCase | RegexOptions.Compiled),
 
                                     //Multi-Part episodes without a title (S01E05.S01E06)
@@ -26,7 +26,7 @@ namespace NzbDrone.Core
 			                            RegexOptions.IgnoreCase | RegexOptions.Compiled),
 
                                     //Multi-episode Repeated (S01E05 - S01E06, 1x05 - 1x06, etc)
-                                    new Regex(@"^(?<title>.+?)(?:\W+S?(?<season>(?<!\d+)\d{1,2}(?!\d+))(?:(?:[ex]){1,2}(?<episode>\d{2}(?!\d+)))+){2,}\W?(?!\\)",
+                                    new Regex(@"^(?<title>.+?)(?:\W+S?(?<season>(?<!\d+)\d{1,2}(?!\d+))(?:(?:[ex]){1,2}(?<episode>\d{1,2}(?!\d+)))+){2,}\W?(?!\\)",
 		                                RegexOptions.IgnoreCase | RegexOptions.Compiled),
 
                                     //Episodes without a title, Single (S01E05, 1x05) AND Multi (S01E04E05, 1x04x05, etc)
@@ -41,16 +41,23 @@ namespace NzbDrone.Core
                                     new Regex(@"^(?<title>.*?)(?:\W?S?(?<season>(?<!\d+)\d{1,2}(?!\d+))(?:(?:\-|[ex]){1,2}(?<episode>\d+))+)+\W?(?!\\)",
                                         RegexOptions.IgnoreCase | RegexOptions.Compiled),
 
+                                    new Regex(@"^(?:S?(?<season>(?<!\d+)(?:\d{1,2}|\d{4})(?!\d+))(?:(?:\-|[ex]|\W[ex])(?<episode>\d{2}(?!\d+)))+\W*)+\W?(?!\\)",
+			                            RegexOptions.IgnoreCase | RegexOptions.Compiled),
+
+                                    //Episodes with a title, Single episodes (S01E05, 1x05, etc) & Multi-episode (S01E05E06, S01E05-06, S01E05 E06, etc)
+                                    new Regex(@"^(?<title>.+?)(?:\W+S?(?<season>(?<!\d+)(?:\d{1,2}|\d{4})(?!\d+))(?:(?:\-|[ex]|\W[ex]){1,2}(?<episode>\d{2}(?!\d+)))+)\W?(?!\\)",
+		                                RegexOptions.IgnoreCase | RegexOptions.Compiled),
+
                                     //Supports 103/113 naming
                                     new Regex(@"^(?<title>.+?)?(?:\W?(?<season>(?<!\d+)\d{1})(?<episode>\d{2}(?!p|i|\d+)))+\W?(?!\\)",
                                         RegexOptions.IgnoreCase | RegexOptions.Compiled),
 
-                                    //Supports 1103/1113 naming
-                                    new Regex(@"^(?<title>.+?)?(?:\W?(?<season>(?<!\d+|\(|\[)\d{2})(?<episode>\d{2}(?!p|i|\d+|\)|\])))+\W?(?!\\)",
-                                        RegexOptions.IgnoreCase | RegexOptions.Compiled),
-
                                     //Mini-Series, treated as season 1, episodes are labeled as Part01, Part 01, Part.1
                                     new Regex(@"^(?<title>.+?)(?:\W+(?:(?:Part\W?|(?<!\d+\W+)e)(?<episode>\d{1,2}(?!\d+)))+)\W?(?!\\)",
+                                        RegexOptions.IgnoreCase | RegexOptions.Compiled),
+
+                                    //Supports 1103/1113 naming
+                                    new Regex(@"^(?<title>.+?)?(?:\W?(?<season>(?<!\d+|\(|\[)\d{2})(?<episode>\d{2}(?!p|i|\d+|\)|\])))+\W?(?!\\)",
                                         RegexOptions.IgnoreCase | RegexOptions.Compiled),
 
                                         //Supports Season only releases
@@ -58,7 +65,7 @@ namespace NzbDrone.Core
                                         RegexOptions.IgnoreCase | RegexOptions.Compiled)
                                 };
 
-        private static readonly Regex NormalizeRegex = new Regex(@"((^|\W)(a|an|the|and|or|of)($|\W))|\W|(?:(?<=[^0-9]+)|\b)(?!(?:19\d{2}|20\d{2}))\d+(?=[^0-9ip]+|\b)",
+        private static readonly Regex NormalizeRegex = new Regex(@"((^|\W)(a|an|the|and|or|of)($|\W))|\W|_|(?:(?<=[^0-9]+)|\b)(?!(?:19\d{2}|20\d{2}))\d+(?=[^0-9ip]+|\b)",
                                                                  RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly Regex SimpleTitleRegex = new Regex(@"480[i|p]|720[i|p]|1080[i|p]|[x|h|x\s|h\s]264|DD\W?5\W1|\<|\>|\?|\*|\:|\||""",
@@ -66,6 +73,9 @@ namespace NzbDrone.Core
 
         private static readonly Regex ReportSizeRegex = new Regex(@"(?<value>\d+\.\d{1,2}|\d+\,\d+\.\d{1,2})\W?(?<unit>GB|MB|GiB|MiB)",
                                                               RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex HeaderRegex = new Regex(@"(?:\[.+\]\-\[.+\]\-\[.+\]\-\[)(?<nzbTitle>.+)(?:\]\-.+)",
+                                                                 RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         internal static EpisodeParseResult ParsePath(string path)
         {
@@ -114,6 +124,7 @@ namespace NzbDrone.Core
                             result.Language = ParseLanguage(title);
                             result.Quality = ParseQuality(title);
                             result.OriginalString = title;
+                            result.ReleaseGroup = ParseReleaseGroup(title);
                             return result;
                         }
                     }
@@ -241,7 +252,7 @@ namespace NzbDrone.Core
             name = name.Trim();
             var normalizedName = NormalizeTitle(name);
             var result = new Quality { QualityType = QualityTypes.Unknown };
-            result.Proper = normalizedName.Contains("proper");
+            result.Proper = (normalizedName.Contains("proper") || normalizedName.Contains("repack"));
 
             if (normalizedName.Contains("dvd") || normalizedName.Contains("bdrip") || normalizedName.Contains("brrip"))
             {
@@ -249,7 +260,7 @@ namespace NzbDrone.Core
                 return result;
             }
 
-            if (normalizedName.Contains("xvid") || normalizedName.Contains("divx"))
+            if (normalizedName.Contains("xvid") || normalizedName.Contains("divx") || normalizedName.Contains("dsr"))
             {
                 if (normalizedName.Contains("bluray"))
                 {
@@ -290,8 +301,6 @@ namespace NzbDrone.Core
             }
             //Based on extension
 
-
-
             if (result.QualityType == QualityTypes.Unknown)
             {
                 try
@@ -311,6 +320,7 @@ namespace NzbDrone.Core
                         case ".flv":
                         case ".dvr-ms":
                         case ".ogm":
+                        case ".strm":
                             {
                                 result.QualityType = QualityTypes.SDTV;
                                 break;
@@ -415,6 +425,28 @@ namespace NzbDrone.Core
             return LanguageType.English;
         }
 
+        internal static string ParseReleaseGroup(string title)
+        {
+            Logger.Trace("Trying to parse release group for {0}", title);
+
+            title = title.Trim();
+            var index = title.LastIndexOf('-');
+            
+            if (index < 0)
+                index = title.LastIndexOf(' ');
+
+            if (index < 0)
+                return String.Empty;
+
+            var group = title.Substring(index + 1);
+
+            if (group.Length == title.Length)
+                return String.Empty;
+
+            Logger.Trace("Release Group found: {0}", group);
+            return group;
+        }
+
         public static string NormalizeTitle(string title)
         {
             long number = 0;
@@ -445,5 +477,15 @@ namespace NzbDrone.Core
             }
             return 0;
         }
+
+        internal static string ParseHeader(string header)
+        {
+            var match = HeaderRegex.Matches(header);
+
+            if (match.Count != 0)
+                return match[0].Groups["nzbTitle"].Value;
+
+            return header;
+        }
     }
-}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+}

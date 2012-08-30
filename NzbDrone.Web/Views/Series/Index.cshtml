@@ -57,9 +57,9 @@
 </style>
 @section ActionMenu{
     <ul class="sub-menu">
-        <li>@Html.ActionLink("Add Series", "Index", "AddSeries")</li>
-        <li>@Ajax.ActionLink("Start RSS Sync", "RssSync", "Command", null)</li>
-        <li>@Html.ActionLink("Series Editor", "Editor", "Series")</li>
+        <li>@Html.ActionLink("Add Series", "Index", "AddSeries", null, new { Title = "Add a new or existing series" })</li>
+        <li>@Ajax.ActionLink("Start RSS Sync", "RssSync", "Command", null, null, new { Title = "Check for newly released downloads" })</li>
+        <li>@Html.ActionLink("Series Editor", "Editor", "Series", null, new { Title = "Edit multiple series" })</li>
     </ul>
 }
 
@@ -153,7 +153,7 @@
                                                                     } 
                                 }, //Title
                                 { sWidth: '100px', "mDataProp": "SeasonsCount" }, //Seasons
-                                { sWidth: '100px', "mDataProp": "QualityProfileName" }, //Quality
+                                { sWidth: '100px', "mDataProp": "QualityProfileName", sClass: "qualityColumn" }, //Quality
                                 { sWidth: '120px', "mDataProp": "Network" }, //Network
                                 { sWidth: '120px', "mDataProp": function (source, type, val) {
                                                                         // 'display' and 'filter' use our fancy naming
@@ -165,7 +165,9 @@
                                                                     } 
                                 }, //Next Airing
                                 { sWidth: '140px', "mDataProp": "Episodes", "bSortable": false, "fnRender": function (row) {
-                                        var progress = row.aData["EpisodeFileCount"] / row.aData["EpisodeCount"] * 100;
+                                        var progress = 100;
+                                        if (row.aData["EpisodeCount"] > 0)
+                                            progress = row.aData["EpisodeFileCount"] / row.aData["EpisodeCount"] * 100;
                                         
                                         var result = "<div class='progressBar' rel='" + progress + "'>" +
                                                         "<span class='progressBarText'>" + row.aData["EpisodeFileCount"] + " / " + row.aData["EpisodeCount"] +"</span>" +
@@ -175,12 +177,13 @@
                                     }
                                 }, //Episodes
                                 { sWidth: '50px', "mDataProp": "HasBanner", "bSortable": false, "fnRender": function (row) {
-                                        return "<img src='../../Content/Images/settings.png' class='editButton gridAction' value='" + row.aData["SeriesId"] + "' rel='" + row.aData["Title"] + "' />" +
-                                                "<img src='../../Content/Images/close.png' class='deleteButton gridAction' value='" + row.aData["SeriesId"] + "' rel='" + row.aData["Title"] + "'/>";
+                                        return "<img src='../../Content/Images/settings.png' class='editButton gridAction' title = 'Edit Series' value='" + row.aData["SeriesId"] + "' rel='" + row.aData["Title"] + "' />" +
+                                                "<img src='../../Content/Images/close.png' class='deleteButton gridAction' title = 'Delete Series' value='" + row.aData["SeriesId"] + "' rel='" + row.aData["Title"] + "'/>";
                                     }
                                 }, //Commands
                                 { sWidth: '60px', "mDataProp": "Details", "bSortable": false, "bVisible": false, "fnRender": function (row) {
-                                        var result = "<b>Airs Day of Week: </b>" + row.aData["AirsDayOfWeek"] + "<br/>" +
+                                    var result = "<b>Airs Day of Week: </b>" + row.aData["AirsDayOfWeek"] + "<br/>" +
+                                                        "<b>Air Time: </b>" + row.aData["AirTime"] + "<br/>" +
                                                         "<b>Overview: </b>" + row.aData["Overview"] + "<br/>";
                                         return result;
                                     }
@@ -206,13 +209,26 @@
         
         //After we delete a series do this...
         function afterDelete(seriesId) {
-            $('.' + seriesId).hide();
-            $('.details_' + seriesId).hide();
+            var row = $('.' + seriesId);
+            
+            if ($(row).hasClass('details-opened')) {
+                var nextRow = $(row).next('tr');
+                if($(nextRow).children('.Details').length > 0) {
+                    $(nextRow).hide();
+                }
+            }
+            
+            $(row).hide();
         }
         
         //After we save do this...
         function afterSave() {
             updateStatus();
+            
+            //Update Quality
+            var seriesId = $('#SeriesId').val();
+            var quality = $('#QualityProfileId :selected').text();
+            $('.' + seriesId).children('.qualityColumn').text(quality);
         }
 
         function updateStatus() {

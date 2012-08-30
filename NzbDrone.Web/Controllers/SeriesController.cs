@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Web.Mvc;
 using System.Web.Script.Serialization;
-using MvcMiniProfiler;
 using NzbDrone.Common.Model;
 using NzbDrone.Core;
 using NzbDrone.Core.Helpers;
@@ -201,7 +200,8 @@ namespace NzbDrone.Web.Controllers
                                                         EpisodeCount = s.EpisodeCount,
                                                         EpisodeFileCount = s.EpisodeFileCount,
                                                         NextAiring = s.NextAiring == null ? String.Empty : s.NextAiring.Value.ToBestDateString(),
-                                                        NextAiringSorter = s.NextAiring == null ? "12/31/9999" : s.NextAiring.Value.ToString("MM/dd/yyyy")
+                                                        NextAiringSorter = s.NextAiring == null ? "12/31/9999" : s.NextAiring.Value.ToString("MM/dd/yyyy"),
+                                                        AirTime = s.AirTimes
                                                     }).ToList();
 
             return series;

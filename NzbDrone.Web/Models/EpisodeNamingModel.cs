@@ -23,7 +23,7 @@ namespace NzbDrone.Web.Models
         public bool AppendQuality { get; set; }
 
         [DisplayName("Use Season Folders")]
-        [Description("Should files be stored in season folders?")]
+        [Description("Should files be stored in season folders by default? (Applied only when a series is added)")]
         public bool SeasonFolders { get; set; }
 
         [DisplayName("Season Folder Format")]
@@ -42,6 +42,18 @@ namespace NzbDrone.Web.Models
         [DisplayName("Multi-Episode Style")]
         [Description("How will multi-episode files be named?")]
         public int MultiEpisodeStyle { get; set; }
+
+        [DisplayName("Use Scene Name")]
+        [Description("Use the scene name, ignoring all other naming settings?")]
+        public bool SceneName { get; set; }
+
+        [DisplayName("XBMC")]
+        [Description("Enable creating metadata for XBMC")]
+        public bool MetadataXbmcEnabled { get; set; }
+
+        [DisplayName("Use Banners")]
+        [Description("Use banners instead of posters?")]
+        public bool MetadataUseBanners { get; set; }
 
         public SelectList SeparatorStyles { get; set; }
         public SelectList NumberStyles { get; set; }

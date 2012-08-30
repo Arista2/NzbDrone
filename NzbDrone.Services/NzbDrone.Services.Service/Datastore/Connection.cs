@@ -1,6 +1,5 @@
 ﻿using System.Configuration;
 using System.Linq;
-using NzbDrone.Services.Service.Migrations;
 using Services.PetaPoco;
 
 
@@ -15,9 +14,6 @@ namespace NzbDrone.Services.Service.Datastore
 
         public static IDatabase GetPetaPocoDb()
         {
-
-            MigrationsHelper.Run(GetConnectionString);
-
             var db = new Database("SqlExpress")
             {
                 KeepConnectionAlive = false,
@@ -26,5 +22,8 @@ namespace NzbDrone.Services.Service.Datastore
 
             return db;
         }
+
+
+    
     }
 }

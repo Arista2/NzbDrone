@@ -46,26 +46,35 @@ namespace NzbDrone.Core.Providers.DownloadClients
 
         public virtual bool IsInQueue(EpisodeParseResult newParseResult)
         {
-            var queue = GetQueue().Where(c => c.ParseResult != null);
-
-            var matchigTitle = queue.Where(q => String.Equals(q.ParseResult.CleanTitle, newParseResult.Series.CleanTitle, StringComparison.InvariantCultureIgnoreCase));
-
-            var matchingTitleWithQuality = matchigTitle.Where(q => q.ParseResult.Quality >= newParseResult.Quality);
-
-
-            if (newParseResult.Series.IsDaily)
+            try
             {
-                return matchingTitleWithQuality.Any(q => q.ParseResult.AirDate.Value.Date == newParseResult.AirDate.Value.Date);
+                var queue = GetQueue().Where(c => c.ParseResult != null);
+
+                var matchigTitle = queue.Where(q => String.Equals(q.ParseResult.CleanTitle, newParseResult.Series.CleanTitle, StringComparison.InvariantCultureIgnoreCase));
+
+                var matchingTitleWithQuality = matchigTitle.Where(q => q.ParseResult.Quality >= newParseResult.Quality);
+
+
+                if (newParseResult.Series.IsDaily)
+                {
+                    return matchingTitleWithQuality.Any(q => q.ParseResult.AirDate.Value.Date == newParseResult.AirDate.Value.Date);
+                }
+
+                var matchingSeason = matchingTitleWithQuality.Where(q => q.ParseResult.SeasonNumber == newParseResult.SeasonNumber);
+
+                if (newParseResult.FullSeason)
+                {
+                    return matchingSeason.Any();
+                }
+
+                return matchingSeason.Any(q => q.ParseResult.EpisodeNumbers != null && q.ParseResult.EpisodeNumbers.Any(e => newParseResult.EpisodeNumbers.Contains(e)));
             }
 
-            var matchingSeason = matchingTitleWithQuality.Where(q => q.ParseResult.SeasonNumber == newParseResult.SeasonNumber);
-
-            if (newParseResult.FullSeason)
+            catch (Exception ex)
             {
-                return matchingSeason.Any();
+                logger.WarnException("Unable to connect to SABnzbd to check queue.", ex);
+                return false;
             }
-
-            return matchingSeason.Any(q => q.ParseResult.EpisodeNumbers != null && q.ParseResult.EpisodeNumbers.Any(e => newParseResult.EpisodeNumbers.Contains(e)));
         }
 
         public virtual bool DownloadNzb(string url, string title)
@@ -121,7 +130,6 @@ namespace NzbDrone.Core.Providers.DownloadClients
             return items ?? new List<SabHistoryItem>();
         }
 
-
         public virtual SabCategoryModel GetCategories(string host = null, int port = 0, string apiKey = null, string username = null, string password = null)
         {
             //Get saved values if any of these are defaults
@@ -153,6 +161,54 @@ namespace NzbDrone.Core.Providers.DownloadClients
             var categories = JsonConvert.DeserializeObject<SabCategoryModel>(response);
 
             return categories;
+        }
+
+        public virtual SabVersionModel GetVersion(string host = null, int port = 0, string apiKey = null, string username = null, string password = null)
+        {
+            //Get saved values if any of these are defaults
+            if (host == null)
+                host = _configProvider.SabHost;
+
+            if (port == 0)
+                port = _configProvider.SabPort;
+
+            if (apiKey == null)
+                apiKey = _configProvider.SabApiKey;
+
+            if (username == null)
+                username = _configProvider.SabUsername;
+
+            if (password == null)
+                password = _configProvider.SabPassword;
+
+            const string action = "mode=version&output=json";
+
+            var command = string.Format(@"http://{0}:{1}/api?{2}&apikey={3}&ma_username={4}&ma_password={5}",
+                                 host, port, action, apiKey, username, password);
+
+            var response = _httpProvider.DownloadString(command);
+
+            if (String.IsNullOrWhiteSpace(response))
+                return null;
+
+            var version = JsonConvert.DeserializeObject<SabVersionModel>(response);
+
+            return version;
+        }
+
+        public virtual string Test(string host, int port, string apiKey, string username, string password)
+        {
+            try
+            {
+                var version = GetVersion(host, port, apiKey, username, password);
+                return version.Version;
+            }
+            catch(Exception ex)
+            {
+                logger.DebugException("Failed to Test SABnzbd", ex);
+            }
+            
+            return String.Empty;
         }
 
         private string GetSabRequest(string action)

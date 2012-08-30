@@ -56,12 +56,26 @@ namespace NzbDrone.Core.Providers.Indexer
 
         protected override IList<string> GetSeasonSearchUrls(string seriesTitle, int seasonNumber)
         {
-            return new List<string>();
+            var searchUrls = new List<string>();
+
+            foreach (var url in Urls)
+            {
+                searchUrls.Add(String.Format("{0}&limit=100&q={1}&season{2}", url, seriesTitle, seasonNumber));
+            }
+
+            return searchUrls;
         }
 
         protected override IList<string> GetPartialSeasonSearchUrls(string seriesTitle, int seasonNumber, int episodeWildcard)
         {
-            return new List<string>();
+            var searchUrls = new List<string>();
+
+            foreach (var url in Urls)
+            {
+                searchUrls.Add(String.Format("{0}&limit=100&q={1}+S{2:00}E{3}", url, seriesTitle, seasonNumber, episodeWildcard));
+            }
+
+            return searchUrls;
         }
 
         public override string Name
@@ -74,6 +88,10 @@ namespace NzbDrone.Core.Providers.Indexer
             return item.Links[0].Uri.ToString();
         }
 
+        protected override string NzbInfoUrl(SyndicationItem item)
+        {
+            return item.Id;
+        }
 
         protected override EpisodeParseResult CustomParser(SyndicationItem item, EpisodeParseResult currentResult)
         {
@@ -81,6 +99,8 @@ namespace NzbDrone.Core.Providers.Indexer
             {
                 if (item.Links.Count > 1)
                     currentResult.Size = item.Links[1].Length;
+
+                currentResult.Indexer = GetName(item);
             }
 
             return currentResult;
@@ -102,6 +122,12 @@ namespace NzbDrone.Core.Providers.Indexer
             }
 
             return urls.ToArray();
+        }
+
+        private string GetName(SyndicationItem item)
+        {
+            var hostname = item.Links[0].Uri.DnsSafeHost.ToLower();
+            return String.Format("{0}_{1}", Name, hostname);
         }
     }
 }

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 using FizzWare.NBuilder;
@@ -171,7 +172,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeSeries);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeEpisodes);
 
             //Act
@@ -206,7 +207,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeSeries);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeEpisodes);
 
 
@@ -247,7 +248,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeEpisode);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeTvDbEpisodes);
 
             //Act
@@ -284,7 +285,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeSeries);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeEpisodes);
 
 
@@ -323,7 +324,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeSeries);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeEpisodes);
 
 
@@ -361,7 +362,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeSeries);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeEpisodes);
 
 
@@ -394,7 +395,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeSeries);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeEpisodes);
 
 
@@ -427,7 +428,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeSeries);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeEpisodes);
 
 
@@ -462,7 +463,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeSeries);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeEpisodes);
 
             Mocker.GetMock<SeasonProvider>()
@@ -492,7 +493,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             var currentEpisodes = new List<Episode>();
 
             Mocker.GetMock<TvDbProvider>(MockBehavior.Strict)
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(tvdbSeries);
 
             Mocker.GetMock<IDatabase>()
@@ -527,7 +528,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             }
 
             Mocker.GetMock<TvDbProvider>(MockBehavior.Strict)
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(tvdbSeries);
 
             Mocker.GetMock<IDatabase>()
@@ -564,7 +565,7 @@ namespace NzbDrone.Core.Test.ProviderTests
                 .Returns(fakeEpisodeList);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(fakeTvDbResult);
 
             //Act
@@ -601,7 +602,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             var fakeSeries = Builder<Series>.CreateNew().With(c => c.SeriesId = seriesId).Build();
 
             Mocker.GetMock<TvDbProvider>(MockBehavior.Strict)
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(tvdbSeries);
 
             Mocker.GetMock<IDatabase>()
@@ -633,7 +634,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             }
 
             Mocker.GetMock<TvDbProvider>(MockBehavior.Strict)
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(tvdbSeries);
 
             var updatedEpisodes = new List<Episode>();
@@ -694,7 +695,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeEpisode);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(tvdbSeries);
 
             Mocker.GetMock<SeasonProvider>()
@@ -1406,7 +1407,7 @@ namespace NzbDrone.Core.Test.ProviderTests
             Db.Insert(fakeSeries);
 
             Mocker.GetMock<TvDbProvider>()
-                .Setup(c => c.GetSeries(seriesId, true))
+                .Setup(c => c.GetSeries(seriesId, true, false))
                 .Returns(tvdbSeries);
 
             //Act

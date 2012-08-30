@@ -31,17 +31,19 @@ namespace NzbDrone.Web.Controllers
         private readonly QualityTypeProvider _qualityTypeProvider;
         private readonly ConfigFileProvider _configFileProvider;
         private readonly NewznabProvider _newznabProvider;
+        private readonly MetadataProvider _metadataProvider;
 
         public SettingsController(ConfigProvider configProvider, IndexerProvider indexerProvider,
-                                  QualityProvider qualityProvider, AutoConfigureProvider autoConfigureProvider,
-                                  SeriesProvider seriesProvider, ExternalNotificationProvider externalNotificationProvider,
-                                  QualityTypeProvider qualityTypeProvider,
-                                  ConfigFileProvider configFileProvider, NewznabProvider newznabProvider)
+                                    QualityProvider qualityProvider, AutoConfigureProvider autoConfigureProvider,
+                                    SeriesProvider seriesProvider, ExternalNotificationProvider externalNotificationProvider,
+                                    QualityTypeProvider qualityTypeProvider, ConfigFileProvider configFileProvider, 
+                                    NewznabProvider newznabProvider, MetadataProvider metadataProvider)
         {
             _externalNotificationProvider = externalNotificationProvider;
             _qualityTypeProvider = qualityTypeProvider;
             _configFileProvider = configFileProvider;
             _newznabProvider = newznabProvider;
+            _metadataProvider = metadataProvider;
             _configProvider = configProvider;
             _indexerProvider = indexerProvider;
             _qualityProvider = qualityProvider;
@@ -67,17 +69,20 @@ namespace NzbDrone.Web.Controllers
                                 NzbsrusUId = _configProvider.NzbsrusUId,
                                 NzbsrusHash = _configProvider.NzbsrusHash,
 
-                                NzbsOrgHash = _configProvider.NzbsOrgHash,
-                                NzbsOrgUId = _configProvider.NzbsOrgUId,
-
                                 NewzbinUsername = _configProvider.NewzbinUsername,
                                 NewzbinPassword = _configProvider.NewzbinPassword,
 
-                                NzbsOrgEnabled = _indexerProvider.GetSettings(typeof(NzbsOrg)).Enable,
+                                FileSharingTalkUid = _configProvider.FileSharingTalkUid,
+                                FileSharingTalkSecret = _configProvider.FileSharingTalkSecret,
+
                                 NzbMatrixEnabled = _indexerProvider.GetSettings(typeof(NzbMatrix)).Enable,
                                 NzbsRUsEnabled = _indexerProvider.GetSettings(typeof(NzbsRUs)).Enable,
                                 NewzbinEnabled = _indexerProvider.GetSettings(typeof(Newzbin)).Enable,
                                 NewznabEnabled = _indexerProvider.GetSettings(typeof(Newznab)).Enable,
+                                WomblesEnabled = _indexerProvider.GetSettings(typeof(Wombles)).Enable,
+                                FileSharingTalkEnabled = _indexerProvider.GetSettings(typeof(FileSharingTalk)).Enable,
+                                NzbIndexEnabled = _indexerProvider.GetSettings(typeof(NzbIndex)).Enable,
+                                NzbClubEnabled = _indexerProvider.GetSettings(typeof(NzbClub)).Enable,
 
                                 NewznabDefinitions = _newznabProvider.All(),
                             });
@@ -106,7 +111,8 @@ namespace NzbDrone.Web.Controllers
                                 SabTvCategorySelectList = tvCategorySelectList,
                                 DownloadClient = (int)_configProvider.DownloadClient,
                                 BlackholeDirectory = _configProvider.BlackholeDirectory,
-                                DownloadClientSelectList = new SelectList(downloadClientTypes, "Key", "Value")
+                                DownloadClientSelectList = new SelectList(downloadClientTypes, "Key", "Value"),
+                                PneumaticDirectory = _configProvider.PneumaticDirectory
                             };
 
             return View(model);
@@ -149,6 +155,7 @@ namespace NzbDrone.Web.Controllers
                                 XbmcHosts = _configProvider.XbmcHosts,
                                 XbmcUsername = _configProvider.XbmcUsername,
                                 XbmcPassword = _configProvider.XbmcPassword,
+                                XbmcUpdateWhenPlaying = _configProvider.XbmcUpdateWhenPlaying,
                                 SmtpEnabled = _externalNotificationProvider.GetSettings(typeof(Smtp)).Enable,
                                 SmtpNotifyOnGrab = _configProvider.SmtpNotifyOnGrab,
                                 SmtpNotifyOnDownload = _configProvider.SmtpNotifyOnGrab,
@@ -199,10 +206,15 @@ namespace NzbDrone.Web.Controllers
             model.SeparatorStyle = _configProvider.SortingSeparatorStyle;
             model.NumberStyle = _configProvider.SortingNumberStyle;
             model.MultiEpisodeStyle = _configProvider.SortingMultiEpisodeStyle;
+            model.SceneName = _configProvider.SortingUseSceneName;
 
             model.SeparatorStyles = new SelectList(EpisodeSortingHelper.GetSeparatorStyles(), "Id", "Name");
             model.NumberStyles = new SelectList(EpisodeSortingHelper.GetNumberStyles(), "Id", "Name");
             model.MultiEpisodeStyles = new SelectList(EpisodeSortingHelper.GetMultiEpisodeStyles(), "Id", "Name");
+            
+            //Metadata
+            model.MetadataXbmcEnabled = _metadataProvider.GetSettings(typeof(Core.Providers.Metadata.Xbmc)).Enable;
+            model.MetadataUseBanners = _configProvider.MetadataUseBanners;
 
             return View(model);
         }
@@ -233,6 +245,7 @@ namespace NzbDrone.Web.Controllers
             var model = new MiscSettingsModel();
             model.EnableBacklogSearching = _configProvider.EnableBacklogSearching;
             model.AutoIgnorePreviouslyDownloadedEpisodes = _configProvider.AutoIgnorePreviouslyDownloadedEpisodes;
+            model.AllowedReleaseGroups = _configProvider.AllowedReleaseGroups;
 
             return View(model);
         }
@@ -343,10 +356,6 @@ namespace NzbDrone.Web.Controllers
             {
                 _configProvider.Retention = data.Retention;
 
-                var nzbsOrgSettings = _indexerProvider.GetSettings(typeof(NzbsOrg));
-                nzbsOrgSettings.Enable = data.NzbsOrgEnabled;
-                _indexerProvider.SaveSettings(nzbsOrgSettings);
-
                 var nzbMatrixSettings = _indexerProvider.GetSettings(typeof(NzbMatrix));
                 nzbMatrixSettings.Enable = data.NzbMatrixEnabled;
                 _indexerProvider.SaveSettings(nzbMatrixSettings);
@@ -363,8 +372,21 @@ namespace NzbDrone.Web.Controllers
                 newznabSettings.Enable = data.NewznabEnabled;
                 _indexerProvider.SaveSettings(newznabSettings);
 
-                _configProvider.NzbsOrgUId = data.NzbsOrgUId;
-                _configProvider.NzbsOrgHash = data.NzbsOrgHash;
+                var womblesSettings = _indexerProvider.GetSettings(typeof(Wombles));
+                womblesSettings.Enable = data.WomblesEnabled;
+                _indexerProvider.SaveSettings(womblesSettings);
+
+                var fileSharingTalkSettings = _indexerProvider.GetSettings(typeof(FileSharingTalk));
+                fileSharingTalkSettings.Enable = data.FileSharingTalkEnabled;
+                _indexerProvider.SaveSettings(fileSharingTalkSettings);
+
+                var nzbIndexSettings = _indexerProvider.GetSettings(typeof(NzbIndex));
+                nzbIndexSettings.Enable = data.NzbIndexEnabled;
+                _indexerProvider.SaveSettings(nzbIndexSettings);
+
+                var nzbClubSettings = _indexerProvider.GetSettings(typeof(NzbClub));
+                nzbClubSettings.Enable = data.NzbClubEnabled;
+                _indexerProvider.SaveSettings(nzbClubSettings);
 
                 _configProvider.NzbMatrixUsername = data.NzbMatrixUsername;
                 _configProvider.NzbMatrixApiKey = data.NzbMatrixApiKey;
@@ -375,8 +397,18 @@ namespace NzbDrone.Web.Controllers
                 _configProvider.NewzbinUsername = data.NewzbinUsername;
                 _configProvider.NewzbinPassword = data.NewzbinPassword;
 
-                if (data.NewznabDefinitions != null)
-                    _newznabProvider.SaveAll(data.NewznabDefinitions);
+                _configProvider.FileSharingTalkUid = data.FileSharingTalkUid;
+                _configProvider.FileSharingTalkSecret = data.FileSharingTalkSecret;
+
+                try
+                {
+                    if (data.NewznabDefinitions != null)
+                        _newznabProvider.SaveAll(data.NewznabDefinitions);
+                }
+                catch(Exception)
+                {
+                    return JsonNotificationResult.Oops("Invalid Nzbnab Indexer found, please check your settings");
+                }
 
                 return GetSuccessResult();
             }
@@ -399,6 +431,7 @@ namespace NzbDrone.Web.Controllers
                 _configProvider.SabDropDirectory = data.DownloadClientDropDirectory;
                 _configProvider.BlackholeDirectory = data.BlackholeDirectory;
                 _configProvider.DownloadClient = (DownloadClientType)data.DownloadClient;
+                _configProvider.PneumaticDirectory = data.PneumaticDirectory;
 
                 return GetSuccessResult();
             }
@@ -487,6 +520,7 @@ namespace NzbDrone.Web.Controllers
                 _configProvider.XbmcHosts = data.XbmcHosts;
                 _configProvider.XbmcUsername = data.XbmcUsername;
                 _configProvider.XbmcPassword = data.XbmcPassword;
+                _configProvider.XbmcUpdateWhenPlaying = data.XbmcUpdateWhenPlaying;
 
                 //SMTP
                 var smtpSettings = _externalNotificationProvider.GetSettings(typeof(Smtp));
@@ -564,6 +598,15 @@ namespace NzbDrone.Web.Controllers
                 _configProvider.SortingSeparatorStyle = data.SeparatorStyle;
                 _configProvider.SortingNumberStyle = data.NumberStyle;
                 _configProvider.SortingMultiEpisodeStyle = data.MultiEpisodeStyle;
+                _configProvider.SortingUseSceneName = data.SceneName;
+
+                //Metadata
+                _configProvider.MetadataUseBanners = data.MetadataUseBanners;
+                
+                //Xbmc
+                var xbmc = _metadataProvider.GetSettings(typeof(Core.Providers.Metadata.Xbmc));
+                xbmc.Enable = data.MetadataXbmcEnabled;
+                _metadataProvider.SaveSettings(xbmc);
 
                 return GetSuccessResult();
             }
@@ -593,6 +636,7 @@ namespace NzbDrone.Web.Controllers
             {
                 _configProvider.EnableBacklogSearching = data.EnableBacklogSearching;
                 _configProvider.AutoIgnorePreviouslyDownloadedEpisodes = data.AutoIgnorePreviouslyDownloadedEpisodes;
+                _configProvider.AllowedReleaseGroups = data.AllowedReleaseGroups;
 
                 return GetSuccessResult();
             }

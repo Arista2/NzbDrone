@@ -2,12 +2,14 @@
 //https://connect.microsoft.com/VisualStudio/feedback/details/325421/syndicationfeed-load-fails-to-parse-datetime-against-a-real-world-feeds-ie7-can-read
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.ServiceModel.Syndication;
+using System.Threading;
 using System.Xml;
 using NLog;
 
@@ -23,7 +25,7 @@ namespace NzbDrone.Core.Providers.Indexer
         private bool _isAtomDateTime;
 
         private static readonly MethodInfo rss20FeedFormatterMethodInfo = typeof(Rss20FeedFormatter).GetMethod("DateFromString", BindingFlags.NonPublic | BindingFlags.Static);
-        private static readonly MethodInfo atom10FeedFormatterMethodInfo = typeof(Atom10FeedFormatter).GetMethod("DateFromString", BindingFlags.NonPublic | BindingFlags.Static);
+        private static readonly MethodInfo atom10FeedFormatterMethodInfo = typeof(Atom10FeedFormatter).GetMethod("DateFromString", BindingFlags.NonPublic | BindingFlags.Instance);
 
         public SyndicationFeedXmlReader(Stream stream) : base(stream) { }
 
@@ -31,6 +33,8 @@ namespace NzbDrone.Core.Providers.Indexer
         {
             _isRss2DateTime = rss20DateTimeHints.Contains(localname);
             _isAtomDateTime = atom10DateTimeHints.Contains(localname);
+
+            CheckForError();       
 
             return base.IsStartElement(localname, ns);
         }
@@ -60,10 +64,37 @@ namespace NzbDrone.Core.Providers.Indexer
                     logger.WarnException("Unable to parse Feed date " + dateVal, e);
                 }
 
-                dateVal = parsedDate.ToString(CultureInfo.CurrentCulture.DateTimeFormat.RFC1123Pattern);
+                var currentCulture = Thread.CurrentThread.CurrentCulture;
+                Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
+                dateVal = parsedDate.ToString("ddd, dd MMM yyyy HH:mm:ss zzz");
+                dateVal = dateVal.Remove(dateVal.LastIndexOf(':'), 1);
+                Thread.CurrentThread.CurrentCulture = currentCulture;
             }
 
             return dateVal;
+        }
+
+        internal void CheckForError()
+        {
+            if (this.MoveToContent() == XmlNodeType.Element)
+            {
+               if (this.Name != "error")
+                    return;
+
+                var message = "Error: ";
+
+                if (this.HasAttributes)
+                {
+                    while (this.MoveToNextAttribute())
+                    {
+                        message += String.Format(" [{0}:{1}]", this.Name, this.Value);
+                    }
+                }
+
+                logger.Error("Error in RSS feed: {0}", message);
+                throw new Exception(message);
+            }
+            
         }
     }
 }

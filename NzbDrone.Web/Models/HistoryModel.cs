@@ -20,5 +20,7 @@ namespace NzbDrone.Web.Models
         public string Indexer { get; set; }
         public int EpisodeId { get; set; }
         public string Details { get; set; }
+        public string NzbInfoUrl { get; set; }
+        public string ReleaseGroup { get; set; }
     }
 }
