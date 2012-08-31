@@ -151,6 +151,7 @@
     <Compile Include="ProviderTests\PostDownloadProviderTests\ProcessDownloadFixture.cs" />
     <Compile Include="ProviderTests\JobProviderTests\TestJobs.cs" />
     <Compile Include="JobTests\AppUpdateJobFixture.cs" />
+    <Compile Include="ProviderTests\TvRageProviderTests\GetUtcOffsetFixture.cs" />
     <Compile Include="ProviderTests\UpdateProviderTests\GetUpdateLogFixture.cs" />
     <Compile Include="ProviderTests\UpdateProviderTests\GetAvilableUpdateFixture.cs" />
     <Compile Include="Services\ParseErrorServiceFixture.cs" />

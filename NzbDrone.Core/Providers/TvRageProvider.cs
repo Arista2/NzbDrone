@@ -97,7 +97,7 @@ namespace NzbDrone.Core.Providers
                 show.Network = s.Element("network").Value;
                 show.AirTime = DateTime.Parse(s.Element("airtime").Value);
                 show.AirDay = (DayOfWeek)Enum.Parse(typeof(DayOfWeek), s.Element("airday").Value);
-                show.TimeZone = s.Element("timezone").Value;
+                show.UtcOffset = GetUtcOffset(s.Element("timezone").Value);
                 return show;
             }
 
@@ -144,6 +144,23 @@ namespace NzbDrone.Core.Providers
             }
 
             return episodes;
+        }
+
+        internal int GetUtcOffset(string timeZone)
+        {
+            if (String.IsNullOrWhiteSpace(timeZone))
+                return 0;
+
+            var offsetString = timeZone.Substring(3, 2);
+            int offset;
+
+            if (!Int32.TryParse(offsetString, out offset))
+                return 0;
+
+            if (timeZone.IndexOf("+DST", StringComparison.CurrentCultureIgnoreCase) > 0)
+                offset++;
+
+            return offset;
         }
     }
 }
