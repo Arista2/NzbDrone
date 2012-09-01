@@ -12,7 +12,7 @@ namespace NzbDrone.Core.Model.TvRage
         public string Link { get; set; }
         public string Country { get; set; }
         public DateTime Started { get; set; }
-        public DateTime Ended { get; set; }
+        public DateTime? Ended { get; set; }
         public int Seasons { get; set; }
         public string Status { get; set; }
         public int RunTime { get; set; }

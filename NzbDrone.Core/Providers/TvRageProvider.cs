@@ -43,12 +43,15 @@ namespace NzbDrone.Core.Providers
                     show.Country = s.Element("country").Value;
 
                     DateTime started;
-                    if(DateTime.TryParse(s.Element("started").Value, out started)) ;
-                    show.Started = started;
+                    if(DateTime.TryParse(s.Element("started").Value, out started));
+                        show.Started = started;
 
                     DateTime ended;
-                    if(DateTime.TryParse(s.Element("ended").Value, out ended)) ;
-                    show.Ended = ended;
+                    if (DateTime.TryParse(s.Element("ended").Value, out ended));
+                        show.Ended = ended;
+
+                    if (show.Ended < new DateTime(1900, 1, 1))
+                        show.Ended = null;
 
                     show.Seasons = Int32.Parse(s.Element("seasons").Value);
                     show.Status = s.Element("status").Value;

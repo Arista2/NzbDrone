@@ -151,6 +151,7 @@
     <Compile Include="ProviderTests\PostDownloadProviderTests\ProcessDownloadFixture.cs" />
     <Compile Include="ProviderTests\JobProviderTests\TestJobs.cs" />
     <Compile Include="JobTests\AppUpdateJobFixture.cs" />
+    <Compile Include="ProviderTests\TvRageProviderTests\SearchSeriesFixture.cs" />
     <Compile Include="ProviderTests\TvRageProviderTests\GetUtcOffsetFixture.cs" />
     <Compile Include="ProviderTests\UpdateProviderTests\GetUpdateLogFixture.cs" />
     <Compile Include="ProviderTests\UpdateProviderTests\GetAvilableUpdateFixture.cs" />
@@ -295,6 +296,15 @@
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <Content Include="Files\TVRage\SearchResults_one.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Files\TVRage\SearchResults_many.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Files\TVRage\SearchResults_empty.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="log.config">
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

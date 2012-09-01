@@ -227,6 +227,7 @@
     <Compile Include="Datastore\MigrationLogger.cs" />
     <Compile Include="Datastore\MigrationsHelper.cs" />
     <Compile Include="Datastore\CustomeMapper.cs" />
+    <Compile Include="Datastore\Migrations\Migration20120831.cs" />
     <Compile Include="Datastore\Migrations\Migration20120802.cs" />
     <Compile Include="Datastore\Migrations\Migration20120727.cs" />
     <Compile Include="Datastore\Migrations\Migration20120504.cs" />
@@ -302,6 +303,7 @@
     <Compile Include="Providers\Metadata\Xbmc.cs" />
     <Compile Include="Providers\SearchHistoryProvider.cs" />
     <Compile Include="Providers\SeasonProvider.cs" />
+    <Compile Include="Providers\TvRageMigrationProvider.cs" />
     <Compile Include="Providers\TvRageProvider.cs" />
     <Compile Include="Jobs\RecentBacklogSearchJob.cs" />
     <Compile Include="Jobs\TrimLogsJob.cs" />
