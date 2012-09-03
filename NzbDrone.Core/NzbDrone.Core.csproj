@@ -249,6 +249,7 @@
     <Compile Include="Datastore\Migrations\NzbDroneMigration.cs" />
     <Compile Include="Datastore\Migrations\SchemaInfo.cs" />
     <Compile Include="Datastore\PetaPoco\EpisodeSeasonRelator.cs" />
+    <Compile Include="Exceptions\UnknownTvRageIdException.cs" />
     <Compile Include="Fluent.cs" />
     <Compile Include="Helpers\SabnzbdQueueTimeConverter.cs" />
     <Compile Include="Helpers\EpisodeSortingHelper.cs" />
@@ -303,7 +304,6 @@
     <Compile Include="Providers\Metadata\Xbmc.cs" />
     <Compile Include="Providers\SearchHistoryProvider.cs" />
     <Compile Include="Providers\SeasonProvider.cs" />
-    <Compile Include="Providers\TvRageMigrationProvider.cs" />
     <Compile Include="Providers\TvRageProvider.cs" />
     <Compile Include="Jobs\RecentBacklogSearchJob.cs" />
     <Compile Include="Jobs\TrimLogsJob.cs" />

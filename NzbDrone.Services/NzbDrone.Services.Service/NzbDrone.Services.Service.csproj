@@ -22,6 +22,10 @@
     <OldToolsVersion>4.0</OldToolsVersion>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <IISExpressSSLPort />
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -213,10 +217,14 @@
   <ItemGroup>
     <Compile Include="App_Start\Logging.cs" />
     <Compile Include="App_Start\NinjectMVC3.cs" />
+    <Compile Include="Controllers\IdMappingController.cs" />
     <Compile Include="Controllers\ExceptionController.cs" />
     <Compile Include="Helpers\HtmlIncludeExtentions.cs" />
+    <Compile Include="Migrations\Migration20120831.cs" />
     <Compile Include="Migrations\Migration20120226.cs" />
     <Compile Include="Migrations\Migration20120229.cs" />
+    <Compile Include="Providers\IdMappingProvider.cs" />
+    <Compile Include="Repository\IdMapping.cs" />
     <Compile Include="Services.PetaPoco.cs" />
     <Compile Include="Datastore\Connection.cs" />
     <Compile Include="Controllers\DailySeriesController.cs" />
