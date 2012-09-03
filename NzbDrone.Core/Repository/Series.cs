@@ -50,6 +50,8 @@ namespace NzbDrone.Core.Repository
 
         public int TvRageId { get; set; }
 
+        public int UtcOffset { get; set; }
+
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="Series"/> is hidden.
         /// </summary>

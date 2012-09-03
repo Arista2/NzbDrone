@@ -4,8 +4,12 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using NLog;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Ninject;
 using NzbDrone.Common;
+using NzbDrone.Core.Exceptions;
+using NzbDrone.Core.Model.Sabnzbd;
 using NzbDrone.Core.Model.TvRage;
 using TvdbLib.Data;
 
@@ -147,6 +151,30 @@ namespace NzbDrone.Core.Providers
             }
 
             return episodes;
+        }
+
+        public virtual int GetIdFromTvDbId(int tvDbId)
+        {
+            try
+            {
+                logger.Trace("Getting TV Rage ID for TVDB Series: {0}", tvDbId);
+
+                var response = _httpProvider.DownloadString("http://services.nzbdrone.com/tvdb/idmapping?tvdbid=" + tvDbId);
+
+                var id = JsonConvert.DeserializeObject<int>(response);
+
+                if (id == 0)
+                    throw new UnknownTvRageIdException("Cannot find TvRageID for: " + tvDbId, tvDbId);
+
+                return id;
+            }
+
+            catch (Exception ex)
+            {
+                logger.WarnException("Error getting TvRageID from server for: " + tvDbId, ex);
+            }
+
+            return 0;
         }
 
         internal int GetUtcOffset(string timeZone)

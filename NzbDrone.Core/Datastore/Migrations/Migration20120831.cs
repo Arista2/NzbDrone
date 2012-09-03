@@ -12,6 +12,7 @@ namespace NzbDrone.Core.Datastore.Migrations
         protected override void MainDbUpgrade()
         {
             Database.AddColumn("Series", new Column("TvRageId", DbType.Int32, ColumnProperty.Null));
+            Database.AddColumn("Series", new Column("UtcOffset", DbType.Int32, ColumnProperty.Null));
         }
     }
 }
